@@ -174,47 +174,49 @@ export default function Whiteboard() {
           }}
         />
       )}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-        <Button
-          variant={!isErasing ? undefined : "outline"}
-          className={`transition-colors`}
-          onClick={() => setIsErasing(false)}
-          size={"icon"}
-          title="Pen tool (P)"
-        >
-          <Pen />
-        </Button>
-        <span>{`${lineSize}px`}</span>
-        {!isErasing && (
-          <Slider
-            className="w-20"
-            defaultValue={[lineSize]}
-            min={1}
-            max={30}
-            step={1}
-            onValueChange={(value) => setLineSize(value[0])}
-          />
-        )}
-        <Button
-          variant={isErasing ? undefined : "outline"}
-          className={`transition-colors`}
-          onClick={() => setIsErasing(true)}
-          size={"icon"}
-          title="Eraser (E)"
-        >
-          <Eraser />
-        </Button>
-        <span>{`${eraserSize}px`}</span>
-        {isErasing && (
-          <Slider
-            className="w-20"
-            defaultValue={[eraserSize]}
-            min={1}
-            max={100}
-            step={1}
-            onValueChange={(value) => setEraserSize(value[0])}
-          />
-        )}
+      <div className="top-4 right-4 left-4 z-10 absolute flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-4">
+          <Button
+            variant={!isErasing ? undefined : "outline"}
+            className={`transition-colors`}
+            onClick={() => setIsErasing(false)}
+            size={"icon"}
+            title="Pen tool (P)"
+          >
+            <Pen />
+          </Button>
+          <span>{`${lineSize}px`}</span>
+          {!isErasing && (
+            <Slider
+              className="w-20"
+              defaultValue={[lineSize]}
+              min={1}
+              max={30}
+              step={1}
+              onValueChange={(value) => setLineSize(value[0])}
+            />
+          )}
+          <Button
+            variant={isErasing ? undefined : "outline"}
+            className={`transition-colors`}
+            onClick={() => setIsErasing(true)}
+            size={"icon"}
+            title="Eraser (E)"
+          >
+            <Eraser />
+          </Button>
+          <span>{`${eraserSize}px`}</span>
+          {isErasing && (
+            <Slider
+              className="w-20"
+              defaultValue={[eraserSize]}
+              min={1}
+              max={100}
+              step={1}
+              onValueChange={(value) => setEraserSize(value[0])}
+            />
+          )}
+        </div>
         <Button
           variant="outline"
           className="transition-colors"
