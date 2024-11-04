@@ -15,11 +15,13 @@ export interface Player {
 }
 
 interface GameControllerProps {
+  onNextRound: () => void;
   onDrawingEnabledChange: (enabled: boolean) => void;
 }
 
 export function GameController({
   onDrawingEnabledChange,
+  onNextRound,
 }: GameControllerProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentDrawer, setCurrentDrawer] = useState<Player | null>(null);
@@ -31,6 +33,79 @@ export function GameController({
   const [isGameOver, setIsGameOver] = useState(false);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const { socket } = useSocket();
+
+  const addPlayer = (name: string) => {
+    const newPlayer: Player = {
+      id: Date.now().toString(),
+      name,
+      score: 0,
+    };
+    const updatedPlayers = [...players, newPlayer];
+    setPlayers(updatedPlayers);
+  };
+
+  const selectNextDrawer = () => {
+    const availablePlayers = players.filter((p) => p.id !== currentDrawer?.id);
+    return availablePlayers[
+      Math.floor(Math.random() * availablePlayers.length)
+    ];
+  };
+
+  const startRound = () => {
+    if (players.length < 2) {
+      alert("Need at least 2 players to start!");
+      return;
+    }
+
+    const drawer = nextDrawer || players[0];
+
+    setCurrentDrawer(drawer);
+    setNextDrawer(null);
+    setIsGameActive(true);
+    setIsPaused(false);
+    setTimeLeft(60);
+    onDrawingEnabledChange(true);
+    // onNextRound();
+  };
+
+  const calculateScore = (timeLeft: number) => {
+    return Math.round((timeLeft / 60) * 10);
+  };
+
+  const handleTimeUp = () => {
+    if (currentDrawer) {
+      const points = calculateScore(timeLeft);
+      const updatedPlayers = players.map((player) =>
+        player.id === currentDrawer.id
+          ? { ...player, score: player.score + points }
+          : player
+      );
+      setPlayers(updatedPlayers);
+    }
+
+    if (players.length >= 2) {
+      const newPlayedRounds = playedRounds + 1;
+      const totalRounds = players.length;
+
+      if (newPlayedRounds >= totalRounds) {
+        setIsGameOver(true);
+        setIsGameActive(false);
+        onDrawingEnabledChange(false);
+
+        return;
+      }
+
+      const next = selectNextDrawer();
+      setPlayedRounds(newPlayedRounds);
+      setNextDrawer(next);
+      setIsPaused(true);
+      onDrawingEnabledChange(false);
+    } else {
+      setIsGameActive(false);
+      setCurrentDrawer(null);
+      onDrawingEnabledChange(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -48,23 +123,51 @@ export function GameController({
     if (!socket) return;
 
     socket.on("game-state-update", (gameState) => {
-      setPlayers(gameState.players);
-      setCurrentDrawer(gameState.currentDrawer);
-      setNextDrawer(gameState.nextDrawer);
-      setIsGameActive(gameState.isGameActive);
-      setIsPaused(gameState.isPaused);
-      setTimeLeft(gameState.timeLeft);
-      setPlayedRounds(gameState.playedRounds);
-      setIsGameOver(gameState.isGameOver);
+      // Only update if the state is different from current state
+      if (JSON.stringify(gameState.players) !== JSON.stringify(players)) {
+        setPlayers(gameState.players);
+      }
+      if (gameState.currentDrawer?.id !== currentDrawer?.id) {
+        setCurrentDrawer(gameState.currentDrawer);
+      }
+      if (gameState.nextDrawer?.id !== nextDrawer?.id) {
+        setNextDrawer(gameState.nextDrawer);
+      }
+      if (gameState.isGameActive !== isGameActive) {
+        setIsGameActive(gameState.isGameActive);
+      }
+      if (gameState.isPaused !== isPaused) {
+        setIsPaused(gameState.isPaused);
+      }
+      if (gameState.timeLeft !== timeLeft) {
+        setTimeLeft(gameState.timeLeft);
+      }
+      if (gameState.playedRounds !== playedRounds) {
+        setPlayedRounds(gameState.playedRounds);
+      }
+      if (gameState.isGameOver !== isGameOver) {
+        setIsGameOver(gameState.isGameOver);
+      }
       onDrawingEnabledChange(gameState.drawingEnabled);
     });
 
     return () => {
       socket.off("game-state-update");
     };
-  }, [socket, onDrawingEnabledChange]);
+  }, [
+    socket,
+    players,
+    currentDrawer,
+    nextDrawer,
+    isGameActive,
+    isPaused,
+    timeLeft,
+    playedRounds,
+    isGameOver,
+    onDrawingEnabledChange,
+  ]);
 
-  const emitGameState = () => {
+  useEffect(() => {
     socket?.emit("game-state-update", {
       players,
       currentDrawer,
@@ -74,83 +177,19 @@ export function GameController({
       timeLeft,
       playedRounds,
       isGameOver,
-      drawingEnabled: currentDrawer !== null,
+      drawingEnabled: !isPaused && isGameActive,
     });
-  };
-
-  const addPlayer = (name: string) => {
-    const newPlayer: Player = {
-      id: Date.now().toString(),
-      name,
-      score: 0,
-    };
-    setPlayers([...players, newPlayer]);
-    emitGameState();
-  };
-
-  const selectNextDrawer = () => {
-    const availablePlayers = players.filter((p) => p.id !== currentDrawer?.id);
-    return availablePlayers[
-      Math.floor(Math.random() * availablePlayers.length)
-    ];
-  };
-
-  const startRound = () => {
-    if (players.length < 2) {
-      alert("Need at least 2 players to start!");
-      return;
-    }
-
-    const drawer = nextDrawer || players[0];
-    setCurrentDrawer(drawer);
-    setNextDrawer(null);
-    setIsGameActive(true);
-    setIsPaused(false);
-    setTimeLeft(60);
-    onDrawingEnabledChange(true);
-    emitGameState();
-  };
-
-  const calculateScore = (timeLeft: number) => {
-    return Math.round((timeLeft / 60) * 10);
-  };
-
-  const handleTimeUp = () => {
-    if (currentDrawer) {
-      const points = calculateScore(timeLeft);
-      setPlayers(
-        players.map((player) =>
-          player.id === currentDrawer.id
-            ? { ...player, score: player.score + points }
-            : player
-        )
-      );
-    }
-
-    if (players.length >= 2) {
-      const newPlayedRounds = playedRounds + 1;
-      const totalRounds = players.length;
-
-      if (newPlayedRounds >= totalRounds) {
-        setIsGameOver(true);
-        setIsGameActive(false);
-        onDrawingEnabledChange(false);
-        emitGameState();
-        return;
-      }
-
-      setPlayedRounds(newPlayedRounds);
-      const next = selectNextDrawer();
-      setNextDrawer(next);
-      setIsPaused(true);
-      onDrawingEnabledChange(false);
-    } else {
-      setIsGameActive(false);
-      setCurrentDrawer(null);
-      onDrawingEnabledChange(false);
-    }
-    emitGameState();
-  };
+  }, [
+    socket,
+    players,
+    currentDrawer,
+    nextDrawer,
+    isGameActive,
+    isPaused,
+    timeLeft,
+    playedRounds,
+    isGameOver,
+  ]);
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">

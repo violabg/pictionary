@@ -150,6 +150,7 @@ export default function Whiteboard() {
   }, [history]);
 
   const clearCanvas = useCallback(() => {
+    console.log("clear-canvas");
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -174,6 +175,7 @@ export default function Whiteboard() {
     if (!socket) return;
 
     socket.on("draw-line", (drawingData: DrawingData) => {
+      console.log("draw-line");
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -195,13 +197,20 @@ export default function Whiteboard() {
       }
     });
 
+    socket.on("game-state-update", (gameState) => {
+      console.log("gameState :>> ", gameState);
+      if (gameState.drawingEnabled !== drawingEnabled) {
+        setDrawingEnabled(gameState.drawingEnabled);
+      }
+    });
+
     socket.on("clear-canvas", clearCanvas);
 
     return () => {
       socket.off("draw-line");
       socket.off("clear-canvas");
     };
-  }, [clearCanvas, socket]);
+  }, [clearCanvas, drawingEnabled, socket]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -223,12 +232,6 @@ export default function Whiteboard() {
     };
   }, [history, undo]);
 
-  useEffect(() => {
-    if (drawingEnabled) {
-      clearCanvas();
-    }
-  }, [drawingEnabled]);
-
   return (
     <div className="fixed inset-0">
       {isErasing && (
@@ -245,7 +248,10 @@ export default function Whiteboard() {
         />
       )}
       <div className="top-[80px] left-4 z-10 absolute">
-        <GameController onDrawingEnabledChange={setDrawingEnabled} />
+        <GameController
+          onDrawingEnabledChange={setDrawingEnabled}
+          onNextRound={clearCanvas}
+        />
       </div>
       <div className="top-4 right-4 left-4 z-10 absolute flex items-center gap-2 bg-black/20 p-2 rounded-md">
         <div className="flex flex-1 items-center gap-4">
