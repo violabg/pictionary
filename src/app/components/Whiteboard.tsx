@@ -1,7 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Eraser, Pen, Trash } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { FaEraser, FaPencilAlt, FaTrash } from "react-icons/fa";
 
 const SizeControl = ({
   value,
@@ -140,39 +141,30 @@ export default function Whiteboard() {
         />
       )}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-        <button
-          className={`px-4 py-2 rounded flex items-center gap-2 border transition-colors ${
-            !isErasing
-              ? "bg-blue-500 border-blue-500 text-white"
-              : "border-gray-400 text-gray-700 hover:bg-gray-100"
-          }`}
+        <Button
+          variant={!isErasing ? undefined : "outline"}
+          className={`transition-colors`}
           onClick={() => setIsErasing(false)}
         >
-          <FaPencilAlt />
+          <Pen />
           <span>Draw</span>
-        </button>
+        </Button>
         {!isErasing && <SizeControl value={lineSize} onChange={setLineSize} />}
-        <button
-          className={`px-4 py-2 rounded flex items-center gap-2 border transition-colors ${
-            isErasing
-              ? "bg-blue-500 border-blue-500 text-white"
-              : "border-gray-400 text-gray-700 hover:bg-gray-100"
-          }`}
+        <Button
+          variant={isErasing ? undefined : "outline"}
+          className={`transition-colors`}
           onClick={() => setIsErasing(true)}
         >
-          <FaEraser />
+          <Eraser />
           <span>Erase</span>
-        </button>
+        </Button>
         {isErasing && (
           <SizeControl value={eraserSize} onChange={setEraserSize} />
         )}
-        <button
-          className="px-4 py-2 rounded flex items-center gap-2 border border-red-500 text-red-500 hover:bg-red-50 transition-colors"
-          onClick={clearCanvas}
-        >
-          <FaTrash />
+        <Button variant="destructive" onClick={clearCanvas}>
+          <Trash />
           <span>Clear</span>
-        </button>
+        </Button>
       </div>
       <canvas
         ref={canvasRef}
