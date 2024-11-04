@@ -129,10 +129,11 @@ export default function Whiteboard() {
           variant={!isErasing ? undefined : "outline"}
           className={`transition-colors`}
           onClick={() => setIsErasing(false)}
+          size={"icon"}
         >
           <Pen />
-          <span>Draw</span>
         </Button>
+        <span>{`${lineSize}px`}</span>
         {!isErasing && (
           <Slider
             className="w-20"
@@ -147,10 +148,11 @@ export default function Whiteboard() {
           variant={isErasing ? undefined : "outline"}
           className={`transition-colors`}
           onClick={() => setIsErasing(true)}
+          size={"icon"}
         >
           <Eraser />
-          <span>Erase</span>
         </Button>
+        <span>{`${eraserSize}px`}</span>
         {isErasing && (
           <Slider
             className="w-20"
