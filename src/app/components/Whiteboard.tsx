@@ -138,21 +138,32 @@ export default function Whiteboard() {
     canvas.width = imageData.width;
     canvas.height = imageData.height;
     const ctx = canvas.getContext("2d");
-    ctx?.putImageData(imageData, 0, 0);
-    return canvas.toDataURL();
+    if (!ctx) return "";
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL("image/png");
   };
 
   const base64ToImageData = (
     base64: string,
-    canvas: HTMLCanvasElement
+    targetCanvas: HTMLCanvasElement
   ): Promise<ImageData> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0);
-        resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = targetCanvas.width;
+        tempCanvas.height = targetCanvas.height;
+        const tempCtx = tempCanvas.getContext("2d");
+        if (!tempCtx) return;
+
+        // Clear and draw new image
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(img, 0, 0, targetCanvas.width, targetCanvas.height);
+
+        resolve(
+          tempCtx.getImageData(0, 0, targetCanvas.width, targetCanvas.height)
+        );
       };
       img.src = base64;
     });
@@ -228,22 +239,26 @@ export default function Whiteboard() {
     });
 
     socket.on("undo-drawing", async (data: { history: string[] }) => {
-      console.log("undo-drawing :>> ", data);
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Convert base64 strings back to ImageData
+      // Clear the canvas first
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       const newHistory: ImageData[] = [];
+
+      // Convert and apply all history states
       for (const base64 of data.history) {
         const imageData = await base64ToImageData(base64, canvas);
         newHistory.push(imageData);
       }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Apply the last state if available
       if (newHistory.length > 0) {
-        ctx.putImageData(newHistory[newHistory.length - 1], 0, 0);
+        const lastState = newHistory[newHistory.length - 1];
+        ctx.putImageData(lastState, 0, 0);
       }
 
       setHistory(newHistory);
