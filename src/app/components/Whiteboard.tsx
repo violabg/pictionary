@@ -3,8 +3,17 @@
 import { GameController } from "@/components/game/GameController";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useSocket } from "@/contexts/SocketContext";
 import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+interface DrawingData {
+  x: number;
+  y: number;
+  isDrawing: boolean;
+  isErasing: boolean;
+  lineSize: number;
+}
 
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,6 +25,7 @@ export default function Whiteboard() {
   const [eraserSize, setEraserSize] = useState(20);
   const [history, setHistory] = useState<ImageData[]>([]);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+  const { socket } = useSocket();
 
   const updateCanvasSize = () => {
     const canvas = canvasRef.current;
@@ -45,6 +55,14 @@ export default function Whiteboard() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    socket?.emit("draw-line", {
+      x,
+      y,
+      isDrawing: false,
+      isErasing,
+      lineSize: isErasing ? eraserSize : lineSize,
+    });
+
     if (isErasing) {
       ctx.globalCompositeOperation = "destination-out";
     } else {
@@ -67,7 +85,7 @@ export default function Whiteboard() {
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     updateCursor(e);
-    if (!isDrawing) return;
+    if (!isDrawing || !drawingEnabled) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -78,6 +96,14 @@ export default function Whiteboard() {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    socket?.emit("draw-line", {
+      x,
+      y,
+      isDrawing: true,
+      isErasing,
+      lineSize: isErasing ? eraserSize : lineSize,
+    });
 
     if (isErasing) {
       ctx.globalCompositeOperation = "destination-out";
@@ -123,7 +149,7 @@ export default function Whiteboard() {
     setHistory((prev) => prev.slice(0, -1));
   }, [history]);
 
-  const clearCanvas = () => {
+  const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -132,7 +158,8 @@ export default function Whiteboard() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHistory([]);
-  };
+    socket?.emit("clear-canvas");
+  }, [socket]);
 
   useEffect(() => {
     updateCanvasSize();
@@ -142,6 +169,39 @@ export default function Whiteboard() {
       window.removeEventListener("resize", updateCanvasSize);
     };
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("draw-line", (drawingData: DrawingData) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.globalCompositeOperation = drawingData.isErasing
+        ? "destination-out"
+        : "source-over";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = drawingData.lineSize;
+
+      if (!drawingData.isDrawing) {
+        ctx.beginPath();
+        ctx.moveTo(drawingData.x, drawingData.y);
+      } else {
+        ctx.lineTo(drawingData.x, drawingData.y);
+        ctx.stroke();
+      }
+    });
+
+    socket.on("clear-canvas", clearCanvas);
+
+    return () => {
+      socket.off("draw-line");
+      socket.off("clear-canvas");
+    };
+  }, [clearCanvas, socket]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {

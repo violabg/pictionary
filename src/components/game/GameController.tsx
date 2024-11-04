@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Timer } from "@/components/ui/timer";
+import { useSocket } from "@/contexts/SocketContext";
 import { Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddPlayerDialog } from "./AddPlayerDialog";
@@ -29,6 +30,7 @@ export function GameController({
   const [playedRounds, setPlayedRounds] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
+  const { socket } = useSocket();
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -42,6 +44,40 @@ export function GameController({
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, [isGameActive]);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("game-state-update", (gameState) => {
+      setPlayers(gameState.players);
+      setCurrentDrawer(gameState.currentDrawer);
+      setNextDrawer(gameState.nextDrawer);
+      setIsGameActive(gameState.isGameActive);
+      setIsPaused(gameState.isPaused);
+      setTimeLeft(gameState.timeLeft);
+      setPlayedRounds(gameState.playedRounds);
+      setIsGameOver(gameState.isGameOver);
+      onDrawingEnabledChange(gameState.drawingEnabled);
+    });
+
+    return () => {
+      socket.off("game-state-update");
+    };
+  }, [socket, onDrawingEnabledChange]);
+
+  const emitGameState = () => {
+    socket?.emit("game-state-update", {
+      players,
+      currentDrawer,
+      nextDrawer,
+      isGameActive,
+      isPaused,
+      timeLeft,
+      playedRounds,
+      isGameOver,
+      drawingEnabled: currentDrawer !== null,
+    });
+  };
+
   const addPlayer = (name: string) => {
     const newPlayer: Player = {
       id: Date.now().toString(),
@@ -49,6 +85,7 @@ export function GameController({
       score: 0,
     };
     setPlayers([...players, newPlayer]);
+    emitGameState();
   };
 
   const selectNextDrawer = () => {
@@ -71,6 +108,7 @@ export function GameController({
     setIsPaused(false);
     setTimeLeft(60);
     onDrawingEnabledChange(true);
+    emitGameState();
   };
 
   const calculateScore = (timeLeft: number) => {
@@ -97,6 +135,7 @@ export function GameController({
         setIsGameOver(true);
         setIsGameActive(false);
         onDrawingEnabledChange(false);
+        emitGameState();
         return;
       }
 
@@ -110,6 +149,7 @@ export function GameController({
       setCurrentDrawer(null);
       onDrawingEnabledChange(false);
     }
+    emitGameState();
   };
 
   return (
