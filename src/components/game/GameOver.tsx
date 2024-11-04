@@ -32,7 +32,7 @@ export function GameOver({ players, onNewGame }: GameOverProps) {
   }, []);
 
   return (
-    <div className="bg-white/90 p-4 rounded-lg">
+    <div className="bg-white/90 p-4 rounded-md">
       <Confetti
         width={windowSize.width}
         height={windowSize.height}
