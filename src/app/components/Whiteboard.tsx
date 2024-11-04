@@ -38,6 +38,21 @@ export default function Whiteboard() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "p") {
+        setIsErasing(false);
+      } else if (e.key === "e") {
+        setIsErasing(true);
+      }
+    };
+
+    window.addEventListener("keypress", handleKeyPress);
+    return () => {
+      window.removeEventListener("keypress", handleKeyPress);
+    };
+  }, []);
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -130,6 +145,7 @@ export default function Whiteboard() {
           className={`transition-colors`}
           onClick={() => setIsErasing(false)}
           size={"icon"}
+          title="Pen tool (P)"
         >
           <Pen />
         </Button>
@@ -149,6 +165,7 @@ export default function Whiteboard() {
           className={`transition-colors`}
           onClick={() => setIsErasing(true)}
           size={"icon"}
+          title="Eraser (E)"
         >
           <Eraser />
         </Button>
@@ -158,7 +175,7 @@ export default function Whiteboard() {
             className="w-20"
             defaultValue={[eraserSize]}
             min={1}
-            max={50}
+            max={100}
             step={1}
             onValueChange={(value) => setEraserSize(value[0])}
           />
