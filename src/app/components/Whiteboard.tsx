@@ -133,6 +133,31 @@ export default function Whiteboard() {
     setHistory((prev) => [...prev, imageData]);
   };
 
+  const imageDataToBase64 = (imageData: ImageData): string => {
+    const canvas = document.createElement("canvas");
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx = canvas.getContext("2d");
+    ctx?.putImageData(imageData, 0, 0);
+    return canvas.toDataURL();
+  };
+
+  const base64ToImageData = (
+    base64: string,
+    canvas: HTMLCanvasElement
+  ): Promise<ImageData> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      };
+      img.src = base64;
+    });
+  };
+
   const undo = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -146,8 +171,13 @@ export default function Whiteboard() {
       ctx.putImageData(previousState, 0, 0);
     }
 
-    setHistory((prev) => prev.slice(0, -1));
-  }, [history]);
+    const newHistory = history.slice(0, -1);
+    setHistory(newHistory);
+
+    // Convert history to base64 strings before sending
+    const base64History = newHistory.map(imageDataToBase64);
+    socket?.emit("undo-drawing", { history: base64History });
+  }, [history, socket]);
 
   const clearCanvas = useCallback(() => {
     console.log("clear-canvas");
@@ -197,6 +227,28 @@ export default function Whiteboard() {
       }
     });
 
+    socket.on("undo-drawing", async (data: { history: string[] }) => {
+      console.log("undo-drawing :>> ", data);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      // Convert base64 strings back to ImageData
+      const newHistory: ImageData[] = [];
+      for (const base64 of data.history) {
+        const imageData = await base64ToImageData(base64, canvas);
+        newHistory.push(imageData);
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (newHistory.length > 0) {
+        ctx.putImageData(newHistory[newHistory.length - 1], 0, 0);
+      }
+
+      setHistory(newHistory);
+    });
+
     socket.on("game-state-update", (gameState) => {
       console.log("gameState :>> ", gameState);
       if (gameState.drawingEnabled !== drawingEnabled) {
@@ -208,6 +260,7 @@ export default function Whiteboard() {
 
     return () => {
       socket.off("draw-line");
+      socket.off("undo-drawing");
       socket.off("clear-canvas");
     };
   }, [clearCanvas, drawingEnabled, socket]);

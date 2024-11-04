@@ -18,6 +18,10 @@ const ioHandler = (req: any, res: any) => {
       socket.on("game-state-update", (gameState) => {
         socket.broadcast.emit("game-state-update", gameState);
       });
+
+      socket.on("undo-drawing", (data) => {
+        socket.broadcast.emit("undo-drawing", data);
+      });
     });
   }
   res.end();
