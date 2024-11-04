@@ -20,7 +20,9 @@ export function GameController({
 }: GameControllerProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentDrawer, setCurrentDrawer] = useState<Player | null>(null);
+  const [nextDrawer, setNextDrawer] = useState<Player | null>(null);
   const [isGameActive, setIsGameActive] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
 
   const addPlayer = () => {
@@ -48,9 +50,11 @@ export function GameController({
       return;
     }
 
-    const nextDrawer = currentDrawer ? selectNextDrawer() : players[0];
-    setCurrentDrawer(nextDrawer);
+    const drawer = nextDrawer || players[0];
+    setCurrentDrawer(drawer);
+    setNextDrawer(null);
     setIsGameActive(true);
+    setIsPaused(false);
     setTimeLeft(60);
     onDrawingEnabledChange(true);
   };
@@ -71,13 +75,15 @@ export function GameController({
       );
     }
 
-    // Instead of ending the game, start a new round with the next player
     if (players.length >= 2) {
-      startRound();
+      const next = selectNextDrawer();
+      setNextDrawer(next);
+      setIsPaused(true);
+      onDrawingEnabledChange(false);
     } else {
       setIsGameActive(false);
-      onDrawingEnabledChange(false);
       setCurrentDrawer(null);
+      onDrawingEnabledChange(false);
     }
   };
 
@@ -86,21 +92,33 @@ export function GameController({
       {!isGameActive ? (
         <Button onClick={startRound} size="sm" disabled={players.length < 2}>
           <Play />
-          Start Round
+          Start Game
         </Button>
+      ) : isPaused ? (
+        <div className="space-y-2">
+          <div className="bg-white/90 p-2 rounded-lg text-center">
+            <p>
+              Next player: <strong>{nextDrawer?.name}</strong>
+            </p>
+          </div>
+          <Button onClick={startRound} size="sm" className="w-full">
+            <Play />
+            {"I'm Ready"}
+          </Button>
+        </div>
       ) : (
         <Button onClick={handleTimeUp} size="sm" variant="destructive">
           <Pause />
           End Round
         </Button>
       )}
-      {isGameActive && (
+      {isGameActive && !isPaused && (
         <div className="bg-white/90 p-4 rounded-lg">
           <Timer
             timeLeft={timeLeft}
             setTimeLeft={setTimeLeft}
             onTimeUp={handleTimeUp}
-            isActive={isGameActive}
+            isActive={isGameActive && !isPaused}
           />
         </div>
       )}
