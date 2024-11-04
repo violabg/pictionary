@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Eraser, Pen, Trash } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Eraser, Pen, Trash, Undo } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -13,6 +13,7 @@ export default function Whiteboard() {
   const [isErasing, setIsErasing] = useState(false);
   const [lineSize, setLineSize] = useState(2);
   const [eraserSize, setEraserSize] = useState(20);
+  const [history, setHistory] = useState<ImageData[]>([]);
 
   const updateCanvasSize = () => {
     const canvas = canvasRef.current;
@@ -28,30 +29,6 @@ export default function Whiteboard() {
     ctx.lineCap = "round";
     ctx.lineWidth = 2;
   };
-
-  useEffect(() => {
-    updateCanvasSize();
-    window.addEventListener("resize", updateCanvasSize);
-
-    return () => {
-      window.removeEventListener("resize", updateCanvasSize);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "p") {
-        setIsErasing(false);
-      } else if (e.key === "e") {
-        setIsErasing(true);
-      }
-    };
-
-    window.addEventListener("keypress", handleKeyPress);
-    return () => {
-      window.removeEventListener("keypress", handleKeyPress);
-    };
-  }, []);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -111,8 +88,36 @@ export default function Whiteboard() {
   };
 
   const stopDrawing = () => {
+    if (isDrawing) {
+      saveCanvasState();
+    }
     setIsDrawing(false);
   };
+
+  const saveCanvasState = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setHistory((prev) => [...prev, imageData]);
+  };
+
+  const undo = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx || history.length === 0) return;
+
+    const previousState = history[history.length - 2]; // Get second to last state
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (previousState) {
+      ctx.putImageData(previousState, 0, 0);
+    }
+
+    setHistory((prev) => prev.slice(0, -1));
+  }, [history]);
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -122,7 +127,37 @@ export default function Whiteboard() {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHistory([]);
   };
+
+  useEffect(() => {
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
+
+    return () => {
+      window.removeEventListener("resize", updateCanvasSize);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "p") {
+        setIsErasing(false);
+      } else if (e.key === "e") {
+        setIsErasing(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+    };
+
+    window.addEventListener("keypress", handleKeyPress);
+    window.addEventListener("keydown", handleKeyPress); // Added for Ctrl+Z
+    return () => {
+      window.removeEventListener("keypress", handleKeyPress);
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [history, undo]); // Add history dependency
 
   return (
     <div className="fixed inset-0">
@@ -180,6 +215,16 @@ export default function Whiteboard() {
             onValueChange={(value) => setEraserSize(value[0])}
           />
         )}
+        <Button
+          variant="outline"
+          className="transition-colors"
+          onClick={undo}
+          size="icon"
+          disabled={history.length <= 1}
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo />
+        </Button>
         <Button variant="destructive" onClick={clearCanvas}>
           <Trash />
           <span>Clear</span>
