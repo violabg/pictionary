@@ -19,18 +19,16 @@ export function Timer({
     if (!isActive) return;
 
     const interval = setInterval(() => {
-      setTimeLeft((time) => {
-        if (time <= 1) {
-          clearInterval(interval);
-          setTimeout(() => onTimeUp(), 0);
-          return 0;
-        }
-        return time - 1;
-      });
+      if (timeLeft <= 1) {
+        clearInterval(interval);
+        setTimeout(() => onTimeUp(), 0);
+        return setTimeLeft(0);
+      }
+      return setTimeLeft(timeLeft - 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, onTimeUp, setTimeLeft]);
+  }, [isActive, onTimeUp, setTimeLeft, timeLeft]);
 
   return (
     <div className="font-bold text-2xl">
