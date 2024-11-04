@@ -1,25 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Eraser, Pen, Trash } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-
-const SizeControl = ({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (size: number) => void;
-}) => (
-  <input
-    type="range"
-    min="1"
-    max="50"
-    value={value}
-    onChange={(e) => onChange(Number(e.target.value))}
-    className="ml-2"
-  />
-);
 
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -149,7 +133,16 @@ export default function Whiteboard() {
           <Pen />
           <span>Draw</span>
         </Button>
-        {!isErasing && <SizeControl value={lineSize} onChange={setLineSize} />}
+        {!isErasing && (
+          <Slider
+            className="w-20"
+            defaultValue={[lineSize]}
+            min={1}
+            max={30}
+            step={1}
+            onValueChange={(value) => setLineSize(value[0])}
+          />
+        )}
         <Button
           variant={isErasing ? undefined : "outline"}
           className={`transition-colors`}
@@ -159,7 +152,14 @@ export default function Whiteboard() {
           <span>Erase</span>
         </Button>
         {isErasing && (
-          <SizeControl value={eraserSize} onChange={setEraserSize} />
+          <Slider
+            className="w-20"
+            defaultValue={[eraserSize]}
+            min={1}
+            max={50}
+            step={1}
+            onValueChange={(value) => setEraserSize(value[0])}
+          />
         )}
         <Button variant="destructive" onClick={clearCanvas}>
           <Trash />
