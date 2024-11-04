@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Timer } from "@/components/ui/timer";
 import { Pause, Play, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
 
 export interface Player {
@@ -27,17 +28,27 @@ export function GameController({
   const [timeLeft, setTimeLeft] = useState(60);
   const [playedRounds, setPlayedRounds] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
 
-  const addPlayer = () => {
-    const name = prompt("Enter player name:");
-    if (name) {
-      const newPlayer: Player = {
-        id: Date.now().toString(),
-        name,
-        score: 0,
-      };
-      setPlayers([...players, newPlayer]);
-    }
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "+" && !isGameActive) {
+        e.preventDefault();
+        setIsAddPlayerOpen(true);
+      }
+    };
+
+    window.addEventListener("keypress", handleKeyPress);
+    return () => window.removeEventListener("keypress", handleKeyPress);
+  }, [isGameActive]);
+
+  const addPlayer = (name: string) => {
+    const newPlayer: Player = {
+      id: Date.now().toString(),
+      name,
+      score: 0,
+    };
+    setPlayers([...players, newPlayer]);
   };
 
   const selectNextDrawer = () => {
@@ -116,9 +127,10 @@ export function GameController({
         <>
           {!isGameActive ? (
             <Button
-              onClick={startRound}
-              size="sm"
               disabled={players.length < 2}
+              size="sm"
+              variant={"secondary"}
+              onClick={startRound}
             >
               <Play />
               Start Game
@@ -130,7 +142,12 @@ export function GameController({
                   Next player: <strong>{nextDrawer?.name}</strong>
                 </p>
               </div>
-              <Button onClick={startRound} size="sm" className="w-full">
+              <Button
+                className="w-full"
+                size="sm"
+                variant={"secondary"}
+                onClick={startRound}
+              >
                 <Play />
                 {"I'm Ready"}
               </Button>
@@ -172,10 +189,19 @@ export function GameController({
               </div>
             ))}
           </div>
-          <Button onClick={addPlayer} size="sm">
+          <Button
+            onClick={() => setIsAddPlayerOpen(true)}
+            size="sm"
+            title="Add Player (+)"
+          >
             <UserPlus />
             Add Player
           </Button>
+          <AddPlayerDialog
+            open={isAddPlayerOpen}
+            onOpenChange={setIsAddPlayerOpen}
+            onAddPlayer={addPlayer}
+          />
         </>
       )}
     </div>
