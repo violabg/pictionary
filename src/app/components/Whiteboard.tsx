@@ -223,6 +223,12 @@ export default function Whiteboard() {
     };
   }, [history, undo]);
 
+  useEffect(() => {
+    if (drawingEnabled) {
+      clearCanvas();
+    }
+  }, [drawingEnabled]);
+
   return (
     <div className="fixed inset-0">
       {isErasing && (
