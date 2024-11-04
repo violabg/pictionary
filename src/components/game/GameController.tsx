@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Timer } from "@/components/ui/timer";
 import { Pause, Play, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { GameOver } from "./GameOver";
 
-interface Player {
+export interface Player {
   id: string;
   name: string;
   score: number;
@@ -24,6 +25,8 @@ export function GameController({
   const [isGameActive, setIsGameActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [playedRounds, setPlayedRounds] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
 
   const addPlayer = () => {
     const name = prompt("Enter player name:");
@@ -76,6 +79,17 @@ export function GameController({
     }
 
     if (players.length >= 2) {
+      const newPlayedRounds = playedRounds + 1;
+      const totalRounds = players.length;
+
+      if (newPlayedRounds >= totalRounds) {
+        setIsGameOver(true);
+        setIsGameActive(false);
+        onDrawingEnabledChange(false);
+        return;
+      }
+
+      setPlayedRounds(newPlayedRounds);
       const next = selectNextDrawer();
       setNextDrawer(next);
       setIsPaused(true);
@@ -89,59 +103,81 @@ export function GameController({
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">
-      {!isGameActive ? (
-        <Button onClick={startRound} size="sm" disabled={players.length < 2}>
-          <Play />
-          Start Game
-        </Button>
-      ) : isPaused ? (
-        <div className="space-y-2">
-          <div className="bg-white/90 p-2 rounded-lg text-center">
-            <p>
-              Next player: <strong>{nextDrawer?.name}</strong>
-            </p>
-          </div>
-          <Button onClick={startRound} size="sm" className="w-full">
-            <Play />
-            {"I'm Ready"}
-          </Button>
-        </div>
+      {isGameOver ? (
+        <GameOver
+          players={[...players].sort((a, b) => b.score - a.score)}
+          onNewGame={() => {
+            setIsGameOver(false);
+            setPlayedRounds(0);
+            setPlayers(players.map((p) => ({ ...p, score: 0 })));
+          }}
+        />
       ) : (
-        <Button onClick={handleTimeUp} size="sm" variant="destructive">
-          <Pause />
-          End Round
-        </Button>
-      )}
-      {isGameActive && !isPaused && (
-        <div className="bg-white/90 p-4 rounded-lg">
-          <Timer
-            timeLeft={timeLeft}
-            setTimeLeft={setTimeLeft}
-            onTimeUp={handleTimeUp}
-            isActive={isGameActive && !isPaused}
-          />
-        </div>
-      )}
-      <div className="space-y-2 bg-white/90 p-4 rounded-lg">
-        {players.map((player) => (
-          <div
-            key={player.id}
-            className={`flex items-center gap-2 ${
-              currentDrawer?.id === player.id ? "font-bold" : ""
-            }`}
-          >
-            <span>{player.name}</span>
-            <span className="text-sm">({player.score} pts)</span>
-            {currentDrawer?.id === player.id && (
-              <span className="text-blue-600 text-sm">(Drawing)</span>
-            )}
+        <>
+          {!isGameActive ? (
+            <Button
+              onClick={startRound}
+              size="sm"
+              disabled={players.length < 2}
+            >
+              <Play />
+              Start Game
+            </Button>
+          ) : isPaused ? (
+            <div className="space-y-2">
+              <div className="bg-white/90 p-2 rounded-lg text-center">
+                <p>
+                  Next player: <strong>{nextDrawer?.name}</strong>
+                </p>
+              </div>
+              <Button onClick={startRound} size="sm" className="w-full">
+                <Play />
+                {"I'm Ready"}
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={handleTimeUp} size="sm" variant="destructive">
+              <Pause />
+              End Round
+            </Button>
+          )}
+          {isGameActive && (
+            <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
+              Round {playedRounds + 1} of {players.length * 2}
+            </div>
+          )}
+          {isGameActive && !isPaused && (
+            <div className="bg-white/90 p-4 rounded-lg">
+              <Timer
+                timeLeft={timeLeft}
+                setTimeLeft={setTimeLeft}
+                onTimeUp={handleTimeUp}
+                isActive={isGameActive && !isPaused}
+              />
+            </div>
+          )}
+          <div className="space-y-2 bg-white/90 p-4 rounded-lg">
+            {players.map((player) => (
+              <div
+                key={player.id}
+                className={`flex items-center gap-2 ${
+                  currentDrawer?.id === player.id ? "font-bold" : ""
+                }`}
+              >
+                <span>{player.name}</span>
+                <span className="text-sm">({player.score} pts)</span>
+                {currentDrawer?.id === player.id && (
+                  <span className="text-blue-600 text-sm">(Drawing)</span>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <Button onClick={addPlayer} size="sm">
-        <UserPlus />
-        Add Player
-      </Button>
+          <Button onClick={addPlayer} size="sm">
+            <UserPlus />
+            Add Player
+          </Button>
+        </>
+      )}
     </div>
   );
 }
