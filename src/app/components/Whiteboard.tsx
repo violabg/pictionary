@@ -31,8 +31,23 @@ export default function Whiteboard() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const container = canvas.parentElement;
+    if (!container) return;
+
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    // Calculate dimensions maintaining 16:9 aspect ratio
+    let width = containerWidth;
+    let height = containerWidth * (9 / 16);
+
+    if (height > containerHeight) {
+      height = containerHeight;
+      width = containerHeight * (16 / 9);
+    }
+
+    canvas.width = width;
+    canvas.height = height;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -301,27 +316,8 @@ export default function Whiteboard() {
   }, [history, undo]);
 
   return (
-    <div className="fixed inset-0">
-      {isErasing && (
-        <div
-          ref={cursorRef}
-          className="fixed border-2 border-black rounded-full pointer-events-none"
-          style={{
-            width: `${eraserSize}px`,
-            height: `${eraserSize}px`,
-            transform: "translate(-50%, -50%)",
-            left: cursorPosition.x,
-            top: cursorPosition.y,
-          }}
-        />
-      )}
-      <div className="top-[80px] left-4 z-10 absolute">
-        <GameController
-          onDrawingEnabledChange={setDrawingEnabled}
-          onNextRound={clearCanvas}
-        />
-      </div>
-      <div className="top-4 right-4 left-4 z-10 absolute flex items-center gap-2 bg-black/20 p-2 rounded-md">
+    <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
+      <header className="flex items-center gap-2 col-span-2 bg-black/20 p-2 rounded-md">
         <div className="flex flex-1 items-center gap-4">
           <Button
             variant={!isErasing ? undefined : "outline"}
@@ -378,23 +374,52 @@ export default function Whiteboard() {
           <Trash />
           <span>Clear</span>
         </Button>
-      </div>
-      <canvas
-        ref={canvasRef}
-        className={`w-full h-full bg-white ${
-          isErasing ? "cursor-none" : "cursor-crosshair"
-        } ${!drawingEnabled ? "pointer-events-none" : ""}`}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-      />
-      {!drawingEnabled && (
-        <div className="absolute inset-0 flex justify-center items-center bg-black/20">
-          <div className="bg-white shadow-lg p-6 rounded-lg text-center">
-            <h2 className="font-bold text-xl">Waiting to start...</h2>
+      </header>
+
+      <aside className="self-start">
+        <GameController
+          onDrawingEnabledChange={setDrawingEnabled}
+          onNextRound={clearCanvas}
+        />
+      </aside>
+
+      <main className="relative bg-black/20 p-2 rounded-md">
+        <div className="relative pb-[56.25%] w-full">
+          {/* Aspect ratio container */}
+          <div className="absolute inset-0">
+            <canvas
+              ref={canvasRef}
+              className={`w-full h-full bg-white rounded-md ${
+                isErasing ? "cursor-none" : "cursor-crosshair"
+              } ${!drawingEnabled ? "pointer-events-none" : ""}`}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+            />
+            {!drawingEnabled && (
+              <div className="absolute inset-0 flex justify-center items-center bg-black/20 rounded-md">
+                <div className="bg-white shadow-lg p-6 rounded-lg text-center">
+                  <h2 className="font-bold text-xl">Waiting to start...</h2>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+      </main>
+
+      {isErasing && (
+        <div
+          ref={cursorRef}
+          className="fixed border-2 border-black rounded-full pointer-events-none"
+          style={{
+            width: `${eraserSize}px`,
+            height: `${eraserSize}px`,
+            transform: "translate(-50%, -50%)",
+            left: cursorPosition.x,
+            top: cursorPosition.y,
+          }}
+        />
       )}
     </div>
   );
