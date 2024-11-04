@@ -239,7 +239,7 @@ export function GameController({
           )}
           {isGameActive && (
             <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
-              Round {playedRounds + 1} of {players.length * 2}
+              Round {playedRounds + 1} of {players.length}
             </div>
           )}
           {isGameActive && !isPaused && (
