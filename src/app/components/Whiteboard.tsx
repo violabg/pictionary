@@ -1,5 +1,6 @@
 "use client";
 
+import { GameController } from "@/components/game/GameController";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Eraser, Pen, Trash, Undo } from "lucide-react";
@@ -14,6 +15,7 @@ export default function Whiteboard() {
   const [lineSize, setLineSize] = useState(2);
   const [eraserSize, setEraserSize] = useState(20);
   const [history, setHistory] = useState<ImageData[]>([]);
+  const [drawingEnabled, setDrawingEnabled] = useState(false);
 
   const updateCanvasSize = () => {
     const canvas = canvasRef.current;
@@ -31,6 +33,8 @@ export default function Whiteboard() {
   };
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!drawingEnabled) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -109,7 +113,7 @@ export default function Whiteboard() {
     const ctx = canvas.getContext("2d");
     if (!ctx || history.length === 0) return;
 
-    const previousState = history[history.length - 2]; // Get second to last state
+    const previousState = history[history.length - 2];
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (previousState) {
@@ -152,12 +156,12 @@ export default function Whiteboard() {
     };
 
     window.addEventListener("keypress", handleKeyPress);
-    window.addEventListener("keydown", handleKeyPress); // Added for Ctrl+Z
+    window.addEventListener("keydown", handleKeyPress);
     return () => {
       window.removeEventListener("keypress", handleKeyPress);
       window.removeEventListener("keydown", handleKeyPress);
     };
-  }, [history, undo]); // Add history dependency
+  }, [history, undo]);
 
   return (
     <div className="fixed inset-0">
@@ -174,7 +178,10 @@ export default function Whiteboard() {
           }}
         />
       )}
-      <div className="top-4 right-4 left-4 z-10 absolute flex items-center gap-2">
+      <div className="top-[80px] left-4 z-10 absolute">
+        <GameController onDrawingEnabledChange={setDrawingEnabled} />
+      </div>
+      <div className="top-4 right-4 left-4 z-10 absolute flex items-center gap-2 bg-black/20 p-2 rounded-md">
         <div className="flex flex-1 items-center gap-4">
           <Button
             variant={!isErasing ? undefined : "outline"}
@@ -236,12 +243,19 @@ export default function Whiteboard() {
         ref={canvasRef}
         className={`w-full h-full bg-white ${
           isErasing ? "cursor-none" : "cursor-crosshair"
-        }`}
+        } ${!drawingEnabled ? "pointer-events-none" : ""}`}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
       />
+      {!drawingEnabled && (
+        <div className="absolute inset-0 flex justify-center items-center bg-black/20">
+          <div className="bg-white shadow-lg p-6 rounded-lg text-center">
+            <h2 className="font-bold text-xl">Waiting to start...</h2>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
