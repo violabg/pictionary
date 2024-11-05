@@ -17,8 +17,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  const socketUrl =
+    process.env.NODE_ENV === "production"
+      ? "https://sp-pictionary.vercel.app"
+      : "http://localhost:3000";
+
   useEffect(() => {
-    const socketInstance = io("http://localhost:3000", {
+    const socketInstance = io(socketUrl, {
       transports: ["websocket"],
       path: "/socket.io",
     });
