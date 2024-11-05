@@ -13,7 +13,27 @@ interface DrawingData {
   isDrawing: boolean;
   isErasing: boolean;
   lineSize: number;
+  sourceWidth: number; // Add these new properties
+  sourceHeight: number;
 }
+
+// Add these helper functions after the component interfaces
+const normalizeCoordinates = (
+  x: number,
+  y: number,
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number
+) => {
+  const scaleX = targetWidth / sourceWidth;
+  const scaleY = targetHeight / sourceHeight;
+  return {
+    x: x * scaleX,
+    y: y * scaleY,
+    scale: Math.min(scaleX, scaleY),
+  };
+};
 
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,6 +96,8 @@ export default function Whiteboard() {
       isDrawing: false,
       isErasing,
       lineSize: isErasing ? eraserSize : lineSize,
+      sourceWidth: canvas.width, // Add these
+      sourceHeight: canvas.height,
     });
 
     if (isErasing) {
@@ -118,6 +140,8 @@ export default function Whiteboard() {
       isDrawing: true,
       isErasing,
       lineSize: isErasing ? eraserSize : lineSize,
+      sourceWidth: canvas.width, // Add these
+      sourceHeight: canvas.height,
     });
 
     if (isErasing) {
@@ -172,9 +196,22 @@ export default function Whiteboard() {
         const tempCtx = tempCanvas.getContext("2d");
         if (!tempCtx) return;
 
-        // Clear and draw new image
+        // Calculate scaled dimensions while maintaining aspect ratio
+        const scale = Math.min(
+          targetCanvas.width / img.width,
+          targetCanvas.height / img.height
+        );
+
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+
+        // Center the image
+        const x = (targetCanvas.width - scaledWidth) / 2;
+        const y = (targetCanvas.height - scaledHeight) / 2;
+
+        // Clear and draw new image with proper scaling
         tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.drawImage(img, 0, 0, targetCanvas.width, targetCanvas.height);
+        tempCtx.drawImage(img, x, y, scaledWidth, scaledHeight);
 
         resolve(
           tempCtx.getImageData(0, 0, targetCanvas.width, targetCanvas.height)
@@ -206,7 +243,6 @@ export default function Whiteboard() {
   }, [history, socket]);
 
   const clearCanvas = useCallback(() => {
-    console.log("clear-canvas");
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -219,7 +255,6 @@ export default function Whiteboard() {
 
   const clear = useCallback(() => {
     clearCanvas();
-    console.log("clear");
     socket?.emit("clear-canvas");
   }, [clearCanvas, socket]);
 
@@ -243,17 +278,33 @@ export default function Whiteboard() {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
+      // Normalize coordinates and line size based on canvas dimensions
+      const {
+        x: normalizedX,
+        y: normalizedY,
+        scale,
+      } = normalizeCoordinates(
+        drawingData.x,
+        drawingData.y,
+        drawingData.sourceWidth,
+        drawingData.sourceHeight,
+        canvas.width,
+        canvas.height
+      );
+
+      const normalizedLineSize = drawingData.lineSize * scale;
+
       ctx.globalCompositeOperation = drawingData.isErasing
         ? "destination-out"
         : "source-over";
       ctx.strokeStyle = "#000000";
-      ctx.lineWidth = drawingData.lineSize;
+      ctx.lineWidth = normalizedLineSize;
 
       if (!drawingData.isDrawing) {
         ctx.beginPath();
-        ctx.moveTo(drawingData.x, drawingData.y);
+        ctx.moveTo(normalizedX, normalizedY);
       } else {
-        ctx.lineTo(drawingData.x, drawingData.y);
+        ctx.lineTo(normalizedX, normalizedY);
         ctx.stroke();
       }
     });
@@ -271,8 +322,12 @@ export default function Whiteboard() {
 
       // Convert and apply all history states
       for (const base64 of data.history) {
-        const imageData = await base64ToImageData(base64, canvas);
-        newHistory.push(imageData);
+        try {
+          const imageData = await base64ToImageData(base64, canvas);
+          newHistory.push(imageData);
+        } catch (error) {
+          console.error("Failed to convert history state:", error);
+        }
       }
 
       // Apply the last state if available
