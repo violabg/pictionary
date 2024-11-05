@@ -30,19 +30,8 @@ export type GameState = {
 
 const DEFAULT_ROUND_DURATION = 120;
 const POINTS_MULTIPLIER = 20;
-
-interface GameControllerProps {
-  onNextRound: () => void;
-  onDrawingEnabledChange: (enabled: boolean) => void;
-  roundDuration?: number;
-}
-
-export function GameController({
-  onDrawingEnabledChange,
-  onNextRound,
-  roundDuration = DEFAULT_ROUND_DURATION,
-}: GameControllerProps) {
-  const [gameState, setGameState] = useState<GameState>({
+const getInitialState = (roundDuration: number) => {
+  const state: GameState = {
     // players: [],
     players: [
       {
@@ -64,7 +53,24 @@ export function GameController({
     isGameOver: false,
     timeLeft: roundDuration,
     currentRoundDuration: roundDuration,
-  });
+  };
+  return state;
+};
+
+interface GameControllerProps {
+  onNextRound: () => void;
+  onDrawingEnabledChange: (enabled: boolean) => void;
+  roundDuration?: number;
+}
+
+export function GameController({
+  onDrawingEnabledChange,
+  onNextRound,
+  roundDuration = DEFAULT_ROUND_DURATION,
+}: GameControllerProps) {
+  const [gameState, setGameState] = useState<GameState>(
+    getInitialState(roundDuration)
+  );
   // Add new state to track drawing enabled status
   const [shouldEnableDrawing, setShouldEnableDrawing] = useState(false);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
