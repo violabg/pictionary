@@ -29,6 +29,7 @@ export type GameState = {
 };
 
 const DEFAULT_ROUND_DURATION = 120;
+const POINTS_MULTIPLIER = 20;
 
 interface GameControllerProps {
   onNextRound: () => void;
@@ -113,7 +114,9 @@ export function GameController({
   };
 
   const calculateScore = (timeLeft: number) => {
-    return Math.round((timeLeft / gameState.currentRoundDuration) * 10);
+    return Math.round(
+      (timeLeft / gameState.currentRoundDuration) * POINTS_MULTIPLIER
+    );
   };
 
   const handleTimeUp = () => {
