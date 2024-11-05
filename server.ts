@@ -13,7 +13,14 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   });
 
-  const io = new Server(server);
+  const io = new Server(server, {
+    cors: {
+      origin: dev
+        ? "http://localhost:3000"
+        : "https://sp-pictionary.vercel.app",
+      methods: ["GET", "POST"],
+    },
+  });
 
   io.on("connection", (socket) => {
     console.log("Client connected");
