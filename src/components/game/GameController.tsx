@@ -118,7 +118,7 @@ export function GameController({
   const handleTimeUp = () => {
     setGameState((prev) => {
       const newState = { ...prev };
-
+      // If there is a current drawer, calculate and update their score
       if (prev.currentDrawer) {
         const points = calculateScore(prev.timeLeft);
         newState.players = prev.players.map((player) =>
@@ -128,10 +128,12 @@ export function GameController({
         );
       }
 
+      // Check if there are at least 2 players to continue the game
       if (prev.players.length >= 2) {
         const newPlayedRounds = prev.playedRounds + 1;
         const totalRounds = prev.players.length;
 
+        // If all players have drawn, end the game
         if (newPlayedRounds >= totalRounds) {
           newState.isGameOver = true;
           newState.isGameActive = false;
@@ -139,15 +141,18 @@ export function GameController({
           return newState;
         }
 
+        // Select the next drawer and pause the game
         const next = selectNextDrawer();
         newState.playedRounds = newPlayedRounds;
         newState.nextDrawer = next;
         newState.isPaused = true;
       } else {
+        // If there are less than 2 players, end the game
         newState.isGameActive = false;
         newState.currentDrawer = null;
       }
 
+      // Disable drawing
       setShouldEnableDrawing(false);
       return newState;
     });
