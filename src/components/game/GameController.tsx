@@ -32,19 +32,19 @@ const DEFAULT_ROUND_DURATION = 120;
 const POINTS_MULTIPLIER = 20;
 const getInitialState = (roundDuration: number) => {
   const state: GameState = {
-    players: [],
-    // players: [
-    //   {
-    //     id: "1",
-    //     name: "Player 1",
-    //     score: 0,
-    //   },
-    //   {
-    //     id: "2",
-    //     name: "Player 2",
-    //     score: 0,
-    //   },
-    // ],
+    // players: [],
+    players: [
+      {
+        id: "1",
+        name: "Player 1",
+        score: 0,
+      },
+      {
+        id: "2",
+        name: "Player 2",
+        score: 0,
+      },
+    ],
     currentDrawer: null,
     nextDrawer: null,
     isGameActive: false,
