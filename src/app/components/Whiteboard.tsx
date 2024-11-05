@@ -1,6 +1,6 @@
 "use client";
 
-import { GameController } from "@/components/game/GameController";
+import { GameController, GameState } from "@/components/game/GameController";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useSocket } from "@/contexts/SocketContext";
@@ -338,9 +338,9 @@ export default function Whiteboard() {
       setHistory(newHistory);
     });
 
-    socket.on("game-state-update", (gameState) => {
+    socket.on("game-state-update", (gameState: GameState) => {
       if (gameState.drawingEnabled !== drawingEnabled) {
-        setDrawingEnabled(gameState.drawingEnabled);
+        setDrawingEnabled(gameState.drawingEnabled ?? false);
       }
     });
 

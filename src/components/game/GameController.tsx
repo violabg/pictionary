@@ -9,13 +9,13 @@ import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
 import { TimerSettings } from "./TimerSettings";
 
-export interface Player {
+export type Player = {
   id: string;
   name: string;
   score: number;
-}
+};
 
-interface GameState {
+export type GameState = {
   players: Player[];
   currentDrawer: Player | null;
   nextDrawer: Player | null;
@@ -25,7 +25,8 @@ interface GameState {
   isGameOver: boolean;
   timeLeft: number;
   currentRoundDuration: number;
-}
+  drawingEnabled?: boolean;
+};
 
 const DEFAULT_ROUND_DURATION = 120;
 
@@ -182,20 +183,17 @@ export function GameController({
   useEffect(() => {
     if (!socket) return;
 
-    socket.on(
-      "game-state-update",
-      (newGameState: GameState & { drawingEnabled?: boolean }) => {
-        setGameState((prev) => {
-          if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
-            return prev;
-          }
-          if (typeof newGameState.drawingEnabled === "boolean") {
-            setShouldEnableDrawing(newGameState.drawingEnabled);
-          }
-          return newGameState;
-        });
-      }
-    );
+    socket.on("game-state-update", (newGameState: GameState) => {
+      setGameState((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
+          return prev;
+        }
+        if (typeof newGameState.drawingEnabled === "boolean") {
+          setShouldEnableDrawing(newGameState.drawingEnabled);
+        }
+        return newGameState;
+      });
+    });
 
     return () => {
       socket.off("game-state-update");
