@@ -3,10 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { Timer } from "@/components/ui/timer";
 import { useSocket } from "@/contexts/SocketContext";
-import { Pause, Play, UserPlus } from "lucide-react";
+import { Clock, Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
+import { TimerSettings } from "./TimerSettings";
 
 export interface Player {
   id: string;
@@ -14,24 +15,31 @@ export interface Player {
   score: number;
 }
 
+const DEFAULT_ROUND_DURATION = 60;
+
 interface GameControllerProps {
   onNextRound: () => void;
   onDrawingEnabledChange: (enabled: boolean) => void;
+  roundDuration?: number; // New prop
 }
 
 export function GameController({
   onDrawingEnabledChange,
   onNextRound,
+  roundDuration = DEFAULT_ROUND_DURATION, // Default value
 }: GameControllerProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentDrawer, setCurrentDrawer] = useState<Player | null>(null);
   const [nextDrawer, setNextDrawer] = useState<Player | null>(null);
   const [isGameActive, setIsGameActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(roundDuration);
   const [playedRounds, setPlayedRounds] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
+  const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
+  const [currentRoundDuration, setCurrentRoundDuration] =
+    useState(roundDuration);
   const { socket } = useSocket();
 
   const addPlayer = (name: string) => {
@@ -63,13 +71,13 @@ export function GameController({
     setNextDrawer(null);
     setIsGameActive(true);
     setIsPaused(false);
-    setTimeLeft(60);
+    setTimeLeft(currentRoundDuration);
     onDrawingEnabledChange(true);
     onNextRound();
   };
 
   const calculateScore = (timeLeft: number) => {
-    return Math.round((timeLeft / 60) * 10);
+    return Math.round((timeLeft / currentRoundDuration) * 10);
   };
 
   const handleTimeUp = () => {
@@ -105,6 +113,11 @@ export function GameController({
       setCurrentDrawer(null);
       onDrawingEnabledChange(false);
     }
+  };
+
+  const handleSetTimer = (seconds: number) => {
+    setCurrentRoundDuration(seconds);
+    setTimeLeft(seconds);
   };
 
   useEffect(() => {
@@ -193,6 +206,17 @@ export function GameController({
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">
+      {!isGameActive && (
+        <Button
+          onClick={() => setIsTimerSettingsOpen(true)}
+          size="sm"
+          variant="outline"
+          title="Set Timer"
+        >
+          <Clock className="mr-2 w-4 h-4" />
+          {currentRoundDuration}s
+        </Button>
+      )}
       {isGameOver ? (
         <GameOver
           players={[...players].sort((a, b) => b.score - a.score)}
@@ -280,6 +304,12 @@ export function GameController({
             open={isAddPlayerOpen}
             onOpenChange={setIsAddPlayerOpen}
             onAddPlayer={addPlayer}
+          />
+          <TimerSettings
+            open={isTimerSettingsOpen}
+            onOpenChange={setIsTimerSettingsOpen}
+            onSetTimer={handleSetTimer}
+            currentTime={currentRoundDuration}
           />
         </>
       )}

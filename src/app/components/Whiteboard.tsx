@@ -42,7 +42,7 @@ export default function Whiteboard() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [lineSize, setLineSize] = useState(2);
-  const [eraserSize, setEraserSize] = useState(20);
+  const [eraserSize, setEraserSize] = useState(30);
   const [history, setHistory] = useState<ImageData[]>([]);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const { socket } = useSocket();
@@ -364,6 +364,8 @@ export default function Whiteboard() {
       } else if ((e.metaKey || e.ctrlKey) && e.key === "z") {
         e.preventDefault();
         undo();
+      } else if (e.key === "c") {
+        clear();
       }
     };
 
@@ -373,7 +375,7 @@ export default function Whiteboard() {
       window.removeEventListener("keypress", handleKeyPress);
       window.removeEventListener("keydown", handleKeyPress);
     };
-  }, [history, undo]);
+  }, [clear, history, undo]);
 
   return (
     <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
