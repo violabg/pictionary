@@ -215,8 +215,13 @@ export default function Whiteboard() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHistory([]);
+  }, []);
+
+  const clear = useCallback(() => {
+    clearCanvas();
+    console.log("clear");
     socket?.emit("clear-canvas");
-  }, [socket]);
+  }, [clearCanvas, socket]);
 
   useEffect(() => {
     updateCanvasSize();
@@ -370,7 +375,7 @@ export default function Whiteboard() {
         >
           <Undo />
         </Button>
-        <Button variant="destructive" onClick={clearCanvas}>
+        <Button variant="destructive" onClick={clear}>
           <Trash />
           <span>Clear</span>
         </Button>
@@ -379,7 +384,7 @@ export default function Whiteboard() {
       <aside className="self-start">
         <GameController
           onDrawingEnabledChange={setDrawingEnabled}
-          onNextRound={clearCanvas}
+          onNextRound={clear}
         />
       </aside>
 

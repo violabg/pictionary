@@ -65,7 +65,7 @@ export function GameController({
     setIsPaused(false);
     setTimeLeft(60);
     onDrawingEnabledChange(true);
-    // onNextRound();
+    onNextRound();
   };
 
   const calculateScore = (timeLeft: number) => {
