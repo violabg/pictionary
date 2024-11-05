@@ -15,31 +15,59 @@ export interface Player {
   score: number;
 }
 
-const DEFAULT_ROUND_DURATION = 60;
+interface GameState {
+  players: Player[];
+  currentDrawer: Player | null;
+  nextDrawer: Player | null;
+  isGameActive: boolean;
+  isPaused: boolean;
+  playedRounds: number;
+  isGameOver: boolean;
+  timeLeft: number;
+  currentRoundDuration: number;
+}
+
+const DEFAULT_ROUND_DURATION = 120;
 
 interface GameControllerProps {
   onNextRound: () => void;
   onDrawingEnabledChange: (enabled: boolean) => void;
-  roundDuration?: number; // New prop
+  roundDuration?: number;
 }
 
 export function GameController({
   onDrawingEnabledChange,
   onNextRound,
-  roundDuration = DEFAULT_ROUND_DURATION, // Default value
+  roundDuration = DEFAULT_ROUND_DURATION,
 }: GameControllerProps) {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [currentDrawer, setCurrentDrawer] = useState<Player | null>(null);
-  const [nextDrawer, setNextDrawer] = useState<Player | null>(null);
-  const [isGameActive, setIsGameActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(roundDuration);
-  const [playedRounds, setPlayedRounds] = useState(0);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [gameState, setGameState] = useState<GameState>({
+    // players: [],
+    players: [
+      {
+        id: "1",
+        name: "Player 1",
+        score: 0,
+      },
+      {
+        id: "2",
+        name: "Player 2",
+        score: 0,
+      },
+    ],
+    currentDrawer: null,
+    nextDrawer: null,
+    isGameActive: false,
+    isPaused: false,
+    playedRounds: 0,
+    isGameOver: false,
+    timeLeft: roundDuration,
+    currentRoundDuration: roundDuration,
+  });
+  // Add new state to track drawing enabled status
+  const [shouldEnableDrawing, setShouldEnableDrawing] = useState(false);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
-  const [currentRoundDuration, setCurrentRoundDuration] =
-    useState(roundDuration);
+
   const { socket } = useSocket();
 
   const addPlayer = (name: string) => {
@@ -48,81 +76,94 @@ export function GameController({
       name,
       score: 0,
     };
-    const updatedPlayers = [...players, newPlayer];
-    setPlayers(updatedPlayers);
+    setGameState((prev) => ({
+      ...prev,
+      players: [...prev.players, newPlayer],
+    }));
   };
 
   const selectNextDrawer = () => {
-    const availablePlayers = players.filter((p) => p.id !== currentDrawer?.id);
+    const availablePlayers = gameState.players.filter(
+      (p) => p.id !== gameState.currentDrawer?.id
+    );
     return availablePlayers[
       Math.floor(Math.random() * availablePlayers.length)
     ];
   };
 
   const startRound = () => {
-    if (players.length < 2) {
+    if (gameState.players.length < 2) {
       alert("Need at least 2 players to start!");
       return;
     }
 
-    const drawer = nextDrawer || players[0];
+    const drawer = gameState.nextDrawer || gameState.players[0];
 
-    setCurrentDrawer(drawer);
-    setNextDrawer(null);
-    setIsGameActive(true);
-    setIsPaused(false);
-    setTimeLeft(currentRoundDuration);
-    onDrawingEnabledChange(true);
+    setGameState((prev) => ({
+      ...prev,
+      currentDrawer: drawer,
+      nextDrawer: null,
+      isGameActive: true,
+      isPaused: false,
+      timeLeft: prev.currentRoundDuration,
+    }));
+    setShouldEnableDrawing(true);
     onNextRound();
   };
 
   const calculateScore = (timeLeft: number) => {
-    return Math.round((timeLeft / currentRoundDuration) * 10);
+    return Math.round((timeLeft / gameState.currentRoundDuration) * 10);
   };
 
   const handleTimeUp = () => {
-    if (currentDrawer) {
-      const points = calculateScore(timeLeft);
-      const updatedPlayers = players.map((player) =>
-        player.id === currentDrawer.id
-          ? { ...player, score: player.score + points }
-          : player
-      );
-      setPlayers(updatedPlayers);
-    }
+    setGameState((prev) => {
+      const newState = { ...prev };
 
-    if (players.length >= 2) {
-      const newPlayedRounds = playedRounds + 1;
-      const totalRounds = players.length;
-
-      if (newPlayedRounds >= totalRounds) {
-        setIsGameOver(true);
-        setIsGameActive(false);
-        onDrawingEnabledChange(false);
-
-        return;
+      if (prev.currentDrawer) {
+        const points = calculateScore(prev.timeLeft);
+        newState.players = prev.players.map((player) =>
+          player.id === prev.currentDrawer?.id
+            ? { ...player, score: player.score + points }
+            : player
+        );
       }
 
-      const next = selectNextDrawer();
-      setPlayedRounds(newPlayedRounds);
-      setNextDrawer(next);
-      setIsPaused(true);
-      onDrawingEnabledChange(false);
-    } else {
-      setIsGameActive(false);
-      setCurrentDrawer(null);
-      onDrawingEnabledChange(false);
-    }
+      if (prev.players.length >= 2) {
+        const newPlayedRounds = prev.playedRounds + 1;
+        const totalRounds = prev.players.length;
+
+        if (newPlayedRounds >= totalRounds) {
+          newState.isGameOver = true;
+          newState.isGameActive = false;
+          setShouldEnableDrawing(false);
+          return newState;
+        }
+
+        const next = selectNextDrawer();
+        newState.playedRounds = newPlayedRounds;
+        newState.nextDrawer = next;
+        newState.isPaused = true;
+      } else {
+        newState.isGameActive = false;
+        newState.currentDrawer = null;
+      }
+
+      setShouldEnableDrawing(false);
+      return newState;
+    });
   };
 
   const handleSetTimer = (seconds: number) => {
-    setCurrentRoundDuration(seconds);
-    setTimeLeft(seconds);
+    setGameState((prev) => ({
+      ...prev,
+      currentRoundDuration: seconds,
+      timeLeft: seconds,
+    }));
   };
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "+" && !isGameActive) {
+      if (e.key === "+" && !gameState.isGameActive) {
         e.preventDefault();
         setIsAddPlayerOpen(true);
       }
@@ -130,83 +171,47 @@ export function GameController({
 
     window.addEventListener("keypress", handleKeyPress);
     return () => window.removeEventListener("keypress", handleKeyPress);
-  }, [isGameActive]);
+  }, [gameState.isGameActive]);
 
+  // Split the socket effect into two separate effects
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("game-state-update", (gameState) => {
-      // Only update if the state is different from current state
-      if (JSON.stringify(gameState.players) !== JSON.stringify(players)) {
-        setPlayers(gameState.players);
+    socket.on(
+      "game-state-update",
+      (newGameState: GameState & { drawingEnabled?: boolean }) => {
+        setGameState((prev) => {
+          if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
+            return prev;
+          }
+          if (typeof newGameState.drawingEnabled === "boolean") {
+            setShouldEnableDrawing(newGameState.drawingEnabled);
+          }
+          return newGameState;
+        });
       }
-      if (gameState.currentDrawer?.id !== currentDrawer?.id) {
-        setCurrentDrawer(gameState.currentDrawer);
-      }
-      if (gameState.nextDrawer?.id !== nextDrawer?.id) {
-        setNextDrawer(gameState.nextDrawer);
-      }
-      if (gameState.isGameActive !== isGameActive) {
-        setIsGameActive(gameState.isGameActive);
-      }
-      if (gameState.isPaused !== isPaused) {
-        setIsPaused(gameState.isPaused);
-      }
-      if (gameState.timeLeft !== timeLeft) {
-        setTimeLeft(gameState.timeLeft);
-      }
-      if (gameState.playedRounds !== playedRounds) {
-        setPlayedRounds(gameState.playedRounds);
-      }
-      if (gameState.isGameOver !== isGameOver) {
-        setIsGameOver(gameState.isGameOver);
-      }
-      onDrawingEnabledChange(gameState.drawingEnabled);
-    });
+    );
 
     return () => {
       socket.off("game-state-update");
     };
-  }, [
-    socket,
-    players,
-    currentDrawer,
-    nextDrawer,
-    isGameActive,
-    isPaused,
-    timeLeft,
-    playedRounds,
-    isGameOver,
-    onDrawingEnabledChange,
-  ]);
+  }, [socket]);
+
+  // Add a separate effect for handling drawing enabled state
+  useEffect(() => {
+    onDrawingEnabledChange(shouldEnableDrawing);
+  }, [shouldEnableDrawing, onDrawingEnabledChange]);
 
   useEffect(() => {
     socket?.emit("game-state-update", {
-      players,
-      currentDrawer,
-      nextDrawer,
-      isGameActive,
-      isPaused,
-      timeLeft,
-      playedRounds,
-      isGameOver,
-      drawingEnabled: !isPaused && isGameActive,
+      ...gameState,
+      drawingEnabled: shouldEnableDrawing,
     });
-  }, [
-    socket,
-    players,
-    currentDrawer,
-    nextDrawer,
-    isGameActive,
-    isPaused,
-    timeLeft,
-    playedRounds,
-    isGameOver,
-  ]);
+  }, [socket, gameState, shouldEnableDrawing]);
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">
-      {!isGameActive && (
+      {!gameState.isGameActive && (
         <Button
           onClick={() => setIsTimerSettingsOpen(true)}
           size="sm"
@@ -214,23 +219,26 @@ export function GameController({
           title="Set Timer"
         >
           <Clock className="mr-2 w-4 h-4" />
-          {currentRoundDuration}s
+          {gameState.currentRoundDuration}s
         </Button>
       )}
-      {isGameOver ? (
+      {gameState.isGameOver ? (
         <GameOver
-          players={[...players].sort((a, b) => b.score - a.score)}
+          players={[...gameState.players].sort((a, b) => b.score - a.score)}
           onNewGame={() => {
-            setIsGameOver(false);
-            setPlayedRounds(0);
-            setPlayers(players.map((p) => ({ ...p, score: 0 })));
+            setGameState((prev) => ({
+              ...prev,
+              isGameOver: false,
+              playedRounds: 0,
+              players: prev.players.map((p) => ({ ...p, score: 0 })),
+            }));
           }}
         />
       ) : (
         <>
-          {!isGameActive ? (
+          {!gameState.isGameActive ? (
             <Button
-              disabled={players.length < 2}
+              disabled={gameState.players.length < 2}
               size="sm"
               variant={"secondary"}
               onClick={startRound}
@@ -238,11 +246,11 @@ export function GameController({
               <Play />
               Start Game
             </Button>
-          ) : isPaused ? (
+          ) : gameState.isPaused ? (
             <div className="space-y-2">
               <div className="bg-white/90 p-2 rounded-lg text-center">
                 <p>
-                  Next player: <strong>{nextDrawer?.name}</strong>
+                  Next player: <strong>{gameState.nextDrawer?.name}</strong>
                 </p>
               </div>
               <Button
@@ -261,32 +269,34 @@ export function GameController({
               End Round
             </Button>
           )}
-          {isGameActive && (
+          {gameState.isGameActive && (
             <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
-              Round {playedRounds + 1} of {players.length}
+              Round {gameState.playedRounds + 1} of {gameState.players.length}
             </div>
           )}
-          {isGameActive && !isPaused && (
+          {gameState.isGameActive && !gameState.isPaused && (
             <div className="bg-white/90 p-4 rounded-lg">
               <Timer
-                timeLeft={timeLeft}
-                setTimeLeft={setTimeLeft}
+                timeLeft={gameState.timeLeft}
+                setTimeLeft={(time) =>
+                  setGameState((prev) => ({ ...prev, timeLeft: time }))
+                }
                 onTimeUp={handleTimeUp}
-                isActive={isGameActive && !isPaused}
+                isActive={gameState.isGameActive && !gameState.isPaused}
               />
             </div>
           )}
           <div className="space-y-2 bg-white/90 p-4 rounded-lg">
-            {players.map((player) => (
+            {gameState.players.map((player) => (
               <div
                 key={player.id}
                 className={`flex items-center gap-2 ${
-                  currentDrawer?.id === player.id ? "font-bold" : ""
+                  gameState.currentDrawer?.id === player.id ? "font-bold" : ""
                 }`}
               >
                 <span>{player.name}</span>
                 <span className="text-sm">({player.score} pts)</span>
-                {currentDrawer?.id === player.id && (
+                {gameState.currentDrawer?.id === player.id && (
                   <span className="text-blue-600 text-sm">(Drawing)</span>
                 )}
               </div>
@@ -309,7 +319,7 @@ export function GameController({
             open={isTimerSettingsOpen}
             onOpenChange={setIsTimerSettingsOpen}
             onSetTimer={handleSetTimer}
-            currentTime={currentRoundDuration}
+            currentTime={gameState.currentRoundDuration}
           />
         </>
       )}

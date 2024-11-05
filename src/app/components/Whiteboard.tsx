@@ -271,7 +271,6 @@ export default function Whiteboard() {
     if (!socket) return;
 
     socket.on("draw-line", (drawingData: DrawingData) => {
-      console.log("draw-line");
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -340,7 +339,6 @@ export default function Whiteboard() {
     });
 
     socket.on("game-state-update", (gameState) => {
-      console.log("gameState :>> ", gameState);
       if (gameState.drawingEnabled !== drawingEnabled) {
         setDrawingEnabled(gameState.drawingEnabled);
       }
