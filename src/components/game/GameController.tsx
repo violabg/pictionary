@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Timer } from "@/components/ui/timer";
-import { useSocket } from "@/contexts/SocketContext";
+import { useSupabase } from "@/contexts/SupabaseContext";
 import { Clock, Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddPlayerDialog } from "./AddPlayerDialog";
@@ -76,7 +76,7 @@ export function GameController({
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
 
-  const { socket } = useSocket();
+  const { supabase } = useSupabase();
 
   const addPlayer = (name: string) => {
     const newPlayer: Player = {
@@ -188,38 +188,45 @@ export function GameController({
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, [gameState.isGameActive]);
 
-  // Split the socket effect into two separate effects
+  // Replace socket effects with Supabase channel
   useEffect(() => {
-    if (!socket) return;
+    const channel = supabase.channel("game");
 
-    socket.on("game-state-update", (newGameState: GameState) => {
-      setGameState((prev) => {
-        if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
-          return prev;
-        }
-        if (typeof newGameState.drawingEnabled === "boolean") {
-          setShouldEnableDrawing(newGameState.drawingEnabled);
-        }
-        return newGameState;
-      });
-    });
+    channel
+      .on("broadcast", { event: "game-state-update" }, ({ payload }) => {
+        setGameState((prev) => {
+          if (JSON.stringify(prev) === JSON.stringify(payload)) {
+            return prev;
+          }
+          if (typeof payload.drawingEnabled === "boolean") {
+            setShouldEnableDrawing(payload.drawingEnabled);
+          }
+          return payload;
+        });
+      })
+      .subscribe();
 
     return () => {
-      socket.off("game-state-update");
+      channel.unsubscribe();
     };
-  }, [socket]);
+  }, [supabase]);
 
   // Add a separate effect for handling drawing enabled state
   useEffect(() => {
     onDrawingEnabledChange(shouldEnableDrawing);
   }, [shouldEnableDrawing, onDrawingEnabledChange]);
 
+  // Update the emit to use Supabase
   useEffect(() => {
-    socket?.emit("game-state-update", {
-      ...gameState,
-      drawingEnabled: shouldEnableDrawing,
+    supabase.channel("game").send({
+      type: "broadcast",
+      event: "game-state-update",
+      payload: {
+        ...gameState,
+        drawingEnabled: shouldEnableDrawing,
+      },
     });
-  }, [socket, gameState, shouldEnableDrawing]);
+  }, [supabase, gameState, shouldEnableDrawing]);
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">

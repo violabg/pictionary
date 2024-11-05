@@ -1,4 +1,8 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+hiYZuIKm7Eyuotod
+
+NEXT_PUBLIC_SUPABASE_URL=https://gecfmykletggctwqmynx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlY2ZteWtsZXRnZ2N0d3FteW54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA4MjI4NzUsImV4cCI6MjA0NjM5ODg3NX0.snUMVngaQg5S9AZQmvz7vdPT8PH8Ms2uFqmeXkTJ6-g
 
 ## Getting Started
 

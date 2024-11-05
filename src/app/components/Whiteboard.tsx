@@ -1,9 +1,9 @@
 "use client";
 
-import { GameController, GameState } from "@/components/game/GameController";
+import { GameController } from "@/components/game/GameController";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { useSocket } from "@/contexts/SocketContext";
+import { useSupabase } from "@/contexts/SupabaseContext";
 import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -45,7 +45,7 @@ export default function Whiteboard() {
   const [eraserSize, setEraserSize] = useState(30);
   const [history, setHistory] = useState<ImageData[]>([]);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
-  const { socket } = useSocket();
+  const { supabase } = useSupabase();
 
   const updateCanvasSize = () => {
     const canvas = canvasRef.current;
@@ -90,7 +90,7 @@ export default function Whiteboard() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    socket?.emit("draw-line", {
+    emitDrawLine({
       x,
       y,
       isDrawing: false,
@@ -134,7 +134,7 @@ export default function Whiteboard() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    socket?.emit("draw-line", {
+    emitDrawLine({
       x,
       y,
       isDrawing: true,
@@ -221,6 +221,32 @@ export default function Whiteboard() {
     });
   };
 
+  const emitDrawLine = (drawingData: DrawingData) => {
+    supabase.channel("drawing").send({
+      type: "broadcast",
+      event: "draw-line",
+      payload: drawingData,
+    });
+  };
+
+  const emitUndo = useCallback(
+    (data: { history: string[] }) => {
+      supabase.channel("drawing").send({
+        type: "broadcast",
+        event: "undo-drawing",
+        payload: data,
+      });
+    },
+    [supabase]
+  );
+
+  const emitClear = useCallback(() => {
+    supabase.channel("drawing").send({
+      type: "broadcast",
+      event: "clear-canvas",
+    });
+  }, [supabase]);
+
   const undo = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -239,8 +265,8 @@ export default function Whiteboard() {
 
     // Convert history to base64 strings before sending
     const base64History = newHistory.map(imageDataToBase64);
-    socket?.emit("undo-drawing", { history: base64History });
-  }, [history, socket]);
+    emitUndo({ history: base64History });
+  }, [emitUndo, history]);
 
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -255,8 +281,8 @@ export default function Whiteboard() {
 
   const clear = useCallback(() => {
     clearCanvas();
-    socket?.emit("clear-canvas");
-  }, [clearCanvas, socket]);
+    emitClear();
+  }, [clearCanvas, emitClear]);
 
   useEffect(() => {
     updateCanvasSize();
@@ -267,91 +293,93 @@ export default function Whiteboard() {
     };
   }, []);
 
+  const drawLine = (drawingData: DrawingData) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Normalize coordinates and line size based on canvas dimensions
+    const {
+      x: normalizedX,
+      y: normalizedY,
+      scale,
+    } = normalizeCoordinates(
+      drawingData.x,
+      drawingData.y,
+      drawingData.sourceWidth,
+      drawingData.sourceHeight,
+      canvas.width,
+      canvas.height
+    );
+
+    const normalizedLineSize = drawingData.lineSize * scale;
+
+    ctx.globalCompositeOperation = drawingData.isErasing
+      ? "destination-out"
+      : "source-over";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = normalizedLineSize;
+
+    if (!drawingData.isDrawing) {
+      ctx.beginPath();
+      ctx.moveTo(normalizedX, normalizedY);
+    } else {
+      ctx.lineTo(normalizedX, normalizedY);
+      ctx.stroke();
+    }
+  };
+
+  const handleUndoDrawing = useCallback(async (data: { history: string[] }) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Clear the canvas first
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const newHistory: ImageData[] = [];
+
+    // Convert and apply all history states
+    for (const base64 of data.history) {
+      try {
+        const imageData = await base64ToImageData(base64, canvas);
+        newHistory.push(imageData);
+      } catch (error) {
+        console.error("Failed to convert history state:", error);
+      }
+    }
+
+    // Apply the last state if available
+    if (newHistory.length > 0) {
+      const lastState = newHistory[newHistory.length - 1];
+      ctx.putImageData(lastState, 0, 0);
+    }
+
+    setHistory(newHistory);
+  }, []);
+
   useEffect(() => {
-    if (!socket) return;
+    const channel = supabase.channel("drawing");
 
-    socket.on("draw-line", (drawingData: DrawingData) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Normalize coordinates and line size based on canvas dimensions
-      const {
-        x: normalizedX,
-        y: normalizedY,
-        scale,
-      } = normalizeCoordinates(
-        drawingData.x,
-        drawingData.y,
-        drawingData.sourceWidth,
-        drawingData.sourceHeight,
-        canvas.width,
-        canvas.height
-      );
-
-      const normalizedLineSize = drawingData.lineSize * scale;
-
-      ctx.globalCompositeOperation = drawingData.isErasing
-        ? "destination-out"
-        : "source-over";
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = normalizedLineSize;
-
-      if (!drawingData.isDrawing) {
-        ctx.beginPath();
-        ctx.moveTo(normalizedX, normalizedY);
-      } else {
-        ctx.lineTo(normalizedX, normalizedY);
-        ctx.stroke();
-      }
-    });
-
-    socket.on("undo-drawing", async (data: { history: string[] }) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Clear the canvas first
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const newHistory: ImageData[] = [];
-
-      // Convert and apply all history states
-      for (const base64 of data.history) {
-        try {
-          const imageData = await base64ToImageData(base64, canvas);
-          newHistory.push(imageData);
-        } catch (error) {
-          console.error("Failed to convert history state:", error);
-        }
-      }
-
-      // Apply the last state if available
-      if (newHistory.length > 0) {
-        const lastState = newHistory[newHistory.length - 1];
-        ctx.putImageData(lastState, 0, 0);
-      }
-
-      setHistory(newHistory);
-    });
-
-    socket.on("game-state-update", (gameState: GameState) => {
-      if (gameState.drawingEnabled !== drawingEnabled) {
-        setDrawingEnabled(gameState.drawingEnabled ?? false);
-      }
-    });
-
-    socket.on("clear-canvas", clearCanvas);
+    channel
+      .on("broadcast", { event: "draw-line" }, ({ payload }) => {
+        drawLine(payload);
+      })
+      .on("broadcast", { event: "undo-drawing" }, ({ payload }) => {
+        handleUndoDrawing(payload);
+      })
+      .on("broadcast", { event: "clear-canvas" }, () => {
+        clearCanvas();
+      })
+      .subscribe();
 
     return () => {
-      socket.off("draw-line");
-      socket.off("undo-drawing");
-      socket.off("clear-canvas");
+      channel.unsubscribe();
     };
-  }, [clearCanvas, drawingEnabled, socket]);
+  }, [clearCanvas, handleUndoDrawing, supabase]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
