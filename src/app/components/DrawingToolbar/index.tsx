@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { SizeSlider } from "./DrawingToolbar/SizeSlider";
+import { SizeSlider } from "./SizeSlider";
 
 type DrawingToolbarProps = {
   canUndo: boolean;
