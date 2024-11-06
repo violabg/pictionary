@@ -8,6 +8,7 @@ import {
   normalizeCoordinates,
 } from "@/utils/canvas";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Canvas from "../Canvas";
 import { DrawingToolbar } from "../DrawingToolbar";
 
 type DrawingData = {
@@ -22,8 +23,6 @@ type DrawingData = {
 
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cursorRef = useRef<HTMLDivElement>(null);
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isDrawing, setIsDrawing] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [currentSize, setCurrentSize] = useState(2);
@@ -137,17 +136,7 @@ export default function Whiteboard() {
     setIsDrawing(true);
   };
 
-  const updateCursor = (e: React.MouseEvent) => {
-    if (cursorRef.current) {
-      setCursorPosition({
-        x: e.clientX,
-        y: e.clientY,
-      });
-    }
-  };
-
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    updateCursor(e);
     if (!isDrawing || !drawingEnabled) return;
 
     const canvas = canvasRef.current;
@@ -308,44 +297,15 @@ export default function Whiteboard() {
         />
       </aside>
 
-      <main className="relative bg-black/20 p-2 rounded-md">
-        <div className="relative pb-[56.25%] w-full">
-          {/* Aspect ratio container */}
-          <div className="absolute inset-0">
-            <canvas
-              ref={canvasRef}
-              className={`w-full h-full bg-white rounded-md ${
-                isErasing ? "cursor-none" : "cursor-crosshair"
-              } ${!drawingEnabled ? "pointer-events-none" : ""}`}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-            />
-            {!drawingEnabled && (
-              <div className="absolute inset-0 flex justify-center items-center bg-black/20 rounded-md">
-                <div className="bg-white shadow-lg p-6 rounded-lg text-center">
-                  <h2 className="font-bold text-xl">Waiting to start...</h2>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-
-      {isErasing && (
-        <div
-          ref={cursorRef}
-          className="fixed border-2 border-black rounded-full pointer-events-none"
-          style={{
-            width: `${currentSize}px`,
-            height: `${currentSize}px`,
-            transform: "translate(-50%, -50%)",
-            left: cursorPosition.x,
-            top: cursorPosition.y,
-          }}
-        />
-      )}
+      <Canvas
+        canvasRef={canvasRef}
+        isErasing={isErasing}
+        drawingEnabled={drawingEnabled}
+        currentSize={currentSize}
+        onDraw={draw}
+        onStartDrawing={startDrawing}
+        onStopDrawing={stopDrawing}
+      />
     </div>
   );
 }
