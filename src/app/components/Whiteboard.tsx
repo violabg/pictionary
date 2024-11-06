@@ -64,37 +64,79 @@ export default function Whiteboard() {
     ctx.lineWidth = 2;
   };
 
+  const handleDrawOperation = useCallback(
+    (drawingData: DrawingData, isRemoteEvent = false) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      let x = drawingData.x;
+      let y = drawingData.y;
+      let lineWidth = drawingData.lineSize;
+
+      // Only normalize coordinates for remote events
+      if (isRemoteEvent) {
+        const normalized = normalizeCoordinates(
+          x,
+          y,
+          drawingData.sourceWidth,
+          drawingData.sourceHeight,
+          canvas.width,
+          canvas.height
+        );
+        x = normalized.x;
+        y = normalized.y;
+        lineWidth = drawingData.lineSize * normalized.scale;
+      }
+
+      ctx.globalCompositeOperation = drawingData.isErasing
+        ? "destination-out"
+        : "source-over";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = lineWidth;
+
+      if (!drawingData.isDrawing) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+
+      // Emit the drawing data to other clients if this is a local event
+      if (!isRemoteEvent) {
+        socket?.emit("draw-line", {
+          ...drawingData,
+          sourceWidth: canvas.width,
+          sourceHeight: canvas.height,
+        });
+      }
+    },
+    [socket]
+  );
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!drawingEnabled) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    socket?.emit("draw-line", {
+    handleDrawOperation({
       x,
       y,
       isDrawing: false,
       isErasing,
       lineSize: isErasing ? eraserSize : lineSize,
-      sourceWidth: canvas.width, // Add these
+      sourceWidth: canvas.width,
       sourceHeight: canvas.height,
     });
 
-    if (isErasing) {
-      ctx.globalCompositeOperation = "destination-out";
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(x, y);
     setIsDrawing(true);
   };
 
@@ -114,33 +156,19 @@ export default function Whiteboard() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    socket?.emit("draw-line", {
+    handleDrawOperation({
       x,
       y,
       isDrawing: true,
       isErasing,
       lineSize: isErasing ? eraserSize : lineSize,
-      sourceWidth: canvas.width, // Add these
+      sourceWidth: canvas.width,
       sourceHeight: canvas.height,
     });
-
-    if (isErasing) {
-      ctx.globalCompositeOperation = "destination-out";
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-    }
-
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = isErasing ? eraserSize : lineSize;
-    ctx.lineTo(x, y);
-    ctx.stroke();
   };
 
   const stopDrawing = () => {
@@ -209,41 +237,7 @@ export default function Whiteboard() {
     if (!socket) return;
 
     socket.on("draw-line", (drawingData: DrawingData) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Normalize coordinates and line size based on canvas dimensions
-      const {
-        x: normalizedX,
-        y: normalizedY,
-        scale,
-      } = normalizeCoordinates(
-        drawingData.x,
-        drawingData.y,
-        drawingData.sourceWidth,
-        drawingData.sourceHeight,
-        canvas.width,
-        canvas.height
-      );
-
-      const normalizedLineSize = drawingData.lineSize * scale;
-
-      ctx.globalCompositeOperation = drawingData.isErasing
-        ? "destination-out"
-        : "source-over";
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = normalizedLineSize;
-
-      if (!drawingData.isDrawing) {
-        ctx.beginPath();
-        ctx.moveTo(normalizedX, normalizedY);
-      } else {
-        ctx.lineTo(normalizedX, normalizedY);
-        ctx.stroke();
-      }
+      handleDrawOperation(drawingData, true);
     });
 
     socket.on("undo-drawing", async (data: { history: string[] }) => {
@@ -289,7 +283,7 @@ export default function Whiteboard() {
       socket.off("undo-drawing");
       socket.off("clear-canvas");
     };
-  }, [clearCanvas, drawingEnabled, socket]);
+  }, [handleDrawOperation, clearCanvas, drawingEnabled, socket]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
