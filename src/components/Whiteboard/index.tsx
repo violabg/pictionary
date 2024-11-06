@@ -30,7 +30,7 @@ export default function Whiteboard() {
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const { socket } = useSocket();
 
-  const updateCanvasSize = () => {
+  const updateCanvasSize = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -58,7 +58,7 @@ export default function Whiteboard() {
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.lineWidth = 2;
-  };
+  }, []);
 
   const handleDrawOperation = useCallback(
     (drawingData: DrawingData, isRemoteEvent = false) => {
@@ -236,17 +236,16 @@ export default function Whiteboard() {
     return () => {
       window.removeEventListener("resize", updateCanvasSize);
     };
-  }, []);
+  }, [updateCanvasSize]);
 
-  // handleing socket events
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("draw-line", (drawingData: DrawingData) => {
+    const handleDrawLine = (drawingData: DrawingData) => {
       handleDrawOperation(drawingData, true);
-    });
+    };
 
-    socket.on("undo-drawing", async (data: { history: string[] }) => {
+    const handleUndoDrawing = async (data: { history: string[] }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -264,22 +263,24 @@ export default function Whiteboard() {
 
       setHistory(newHistory);
       updateCanvasFromHistory(newHistory);
-    });
+    };
 
-    socket.on("game-state-update", (gameState: GameState) => {
-      if (gameState.drawingEnabled !== drawingEnabled) {
-        setDrawingEnabled(gameState.drawingEnabled ?? false);
-      }
-    });
+    const handleGameStateUpdate = (gameState: GameState) => {
+      setDrawingEnabled(gameState.drawingEnabled ?? false);
+    };
 
+    socket.on("draw-line", handleDrawLine);
+    socket.on("undo-drawing", handleUndoDrawing);
+    socket.on("game-state-update", handleGameStateUpdate);
     socket.on("clear-canvas", clearCanvas);
 
     return () => {
-      socket.off("draw-line");
-      socket.off("undo-drawing");
-      socket.off("clear-canvas");
+      socket.off("draw-line", handleDrawLine);
+      socket.off("undo-drawing", handleUndoDrawing);
+      socket.off("game-state-update", handleGameStateUpdate);
+      socket.off("clear-canvas", clearCanvas);
     };
-  }, [handleDrawOperation, clearCanvas, drawingEnabled, socket]);
+  }, [handleDrawOperation, clearCanvas, socket]);
 
   return (
     <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
