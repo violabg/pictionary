@@ -1,16 +1,14 @@
 "use client";
 
 import { GameController, GameState } from "@/components/game/GameController";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { useSocket } from "@/contexts/SocketContext";
 import {
   base64ToImageData,
   imageDataToBase64,
   normalizeCoordinates,
 } from "@/utils/canvas";
-import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DrawingToolbar } from "./DrawingToolbar";
 
 type DrawingData = {
   x: number;
@@ -28,8 +26,7 @@ export default function Whiteboard() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isDrawing, setIsDrawing] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
-  const [lineSize, setLineSize] = useState(2);
-  const [eraserSize, setEraserSize] = useState(30);
+  const [currentSize, setCurrentSize] = useState(2);
   const [history, setHistory] = useState<ImageData[]>([]);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const { socket } = useSocket();
@@ -132,7 +129,7 @@ export default function Whiteboard() {
       y,
       isDrawing: false,
       isErasing,
-      lineSize: isErasing ? eraserSize : lineSize,
+      lineSize: isErasing ? currentSize : currentSize,
       sourceWidth: canvas.width,
       sourceHeight: canvas.height,
     });
@@ -165,7 +162,7 @@ export default function Whiteboard() {
       y,
       isDrawing: true,
       isErasing,
-      lineSize: isErasing ? eraserSize : lineSize,
+      lineSize: isErasing ? currentSize : currentSize,
       sourceWidth: canvas.width,
       sourceHeight: canvas.height,
     });
@@ -188,6 +185,7 @@ export default function Whiteboard() {
   };
 
   const undo = useCallback(() => {
+    console.log("undo");
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -223,6 +221,20 @@ export default function Whiteboard() {
     clearCanvas();
     socket?.emit("clear-canvas");
   }, [clearCanvas, socket]);
+
+  const handleToolChange = useCallback(
+    ({
+      isErasing: newIsErasing,
+      size,
+    }: {
+      isErasing: boolean;
+      size: number;
+    }) => {
+      setIsErasing(newIsErasing);
+      setCurrentSize(size);
+    },
+    []
+  );
 
   useEffect(() => {
     updateCanvasSize();
@@ -285,88 +297,14 @@ export default function Whiteboard() {
     };
   }, [handleDrawOperation, clearCanvas, drawingEnabled, socket]);
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "p") {
-        setIsErasing(false);
-      } else if (e.key === "e") {
-        setIsErasing(true);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "z") {
-        e.preventDefault();
-        undo();
-      } else if (e.key === "c") {
-        clear();
-      }
-    };
-
-    window.addEventListener("keypress", handleKeyPress);
-    window.addEventListener("keydown", handleKeyPress);
-    return () => {
-      window.removeEventListener("keypress", handleKeyPress);
-      window.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [clear, history, undo]);
-
   return (
     <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
-      <header className="flex items-center gap-2 col-span-2 bg-black/20 p-2 rounded-md">
-        <div className="flex flex-1 items-center gap-4">
-          <Button
-            variant={!isErasing ? undefined : "outline"}
-            className={`transition-colors`}
-            onClick={() => setIsErasing(false)}
-            size={"icon"}
-            title="Pen tool (P)"
-          >
-            <Pen />
-          </Button>
-          <span>{`${lineSize}px`}</span>
-          {!isErasing && (
-            <Slider
-              className="w-20"
-              defaultValue={[lineSize]}
-              min={1}
-              max={30}
-              step={1}
-              onValueChange={(value) => setLineSize(value[0])}
-            />
-          )}
-          <Button
-            variant={isErasing ? undefined : "outline"}
-            className={`transition-colors`}
-            onClick={() => setIsErasing(true)}
-            size={"icon"}
-            title="Eraser (E)"
-          >
-            <Eraser />
-          </Button>
-          <span>{`${eraserSize}px`}</span>
-          {isErasing && (
-            <Slider
-              className="w-20"
-              defaultValue={[eraserSize]}
-              min={1}
-              max={100}
-              step={1}
-              onValueChange={(value) => setEraserSize(value[0])}
-            />
-          )}
-        </div>
-        <Button
-          variant="outline"
-          className="transition-colors"
-          onClick={undo}
-          size="icon"
-          disabled={history.length <= 1}
-          title="Undo (Ctrl+Z)"
-        >
-          <Undo />
-        </Button>
-        <Button variant="destructive" onClick={clear}>
-          <Trash />
-          <span>Clear</span>
-        </Button>
-      </header>
+      <DrawingToolbar
+        canUndo={history.length > 1}
+        onUndo={undo}
+        onClear={clear}
+        onToolChange={handleToolChange}
+      />
 
       <aside className="self-start">
         <GameController
@@ -405,8 +343,8 @@ export default function Whiteboard() {
           ref={cursorRef}
           className="fixed border-2 border-black rounded-full pointer-events-none"
           style={{
-            width: `${eraserSize}px`,
-            height: `${eraserSize}px`,
+            width: `${currentSize}px`,
+            height: `${currentSize}px`,
             transform: "translate(-50%, -50%)",
             left: cursorPosition.x,
             top: cursorPosition.y,
