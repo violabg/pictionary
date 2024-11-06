@@ -1,6 +1,6 @@
 "use client";
 
-import { GameController, GameState } from "@/components/game/GameController";
+import { GameController, GameState } from "@/components/GameController";
 import { useSocket } from "@/contexts/SocketContext";
 import {
   base64ToImageData,
@@ -8,7 +8,7 @@ import {
   normalizeCoordinates,
 } from "@/utils/canvas";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DrawingToolbar } from "./DrawingToolbar";
+import { DrawingToolbar } from "../DrawingToolbar";
 
 type DrawingData = {
   x: number;

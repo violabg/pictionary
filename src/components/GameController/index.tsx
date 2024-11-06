@@ -1,13 +1,13 @@
 "use client";
 
+import { Timer } from "@/components/Timer";
 import { Button } from "@/components/ui/button";
-import { Timer } from "@/components/ui/timer";
 import { useSocket } from "@/contexts/SocketContext";
 import { Clock, Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { TimerSettings } from "../Timer/TimerSettings";
 import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
-import { TimerSettings } from "./TimerSettings";
 
 export type Player = {
   id: string;

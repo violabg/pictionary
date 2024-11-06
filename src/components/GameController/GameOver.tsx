@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { Player } from "./GameController";
+import { Player } from ".";
 
 const Confetti = dynamic(() => import("react-confetti"), { ssr: false });
 
