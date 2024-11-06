@@ -1,12 +1,35 @@
-export const imageDataToBase64 = (imageData: ImageData): string => {
-  const canvas = document.createElement("canvas");
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
+type CanvasSize = {
+  width: number;
+  height: number;
+};
 
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/png");
+// Helper function to safely get canvas context
+const get2DContext = (canvas: HTMLCanvasElement): CanvasRenderingContext2D => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Failed to get 2D context");
+  }
+  return ctx;
+};
+
+// Helper to create a temporary canvas with specific size
+const createTempCanvas = ({ width, height }: CanvasSize): HTMLCanvasElement => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+};
+
+export const imageDataToBase64 = (imageData: ImageData): string => {
+  try {
+    const canvas = createTempCanvas(imageData);
+    const ctx = get2DContext(canvas);
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch (error) {
+    console.error("Error converting ImageData to base64:", error);
+    return "";
+  }
 };
 
 export const base64ToImageData = (
@@ -17,32 +40,35 @@ export const base64ToImageData = (
     const img = new Image();
     img.onerror = () => reject(new Error("Failed to load image"));
     img.onload = () => {
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = targetCanvas.width;
-      tempCanvas.height = targetCanvas.height;
-      const tempCtx = tempCanvas.getContext("2d");
-      if (!tempCtx) {
-        reject(new Error("Failed to get canvas context"));
-        return;
+      try {
+        const tempCanvas = createTempCanvas(targetCanvas);
+        const tempCtx = get2DContext(tempCanvas);
+
+        // Calculate scale while maintaining aspect ratio
+        const scale = Math.min(
+          targetCanvas.width / img.width,
+          targetCanvas.height / img.height
+        );
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+
+        // Center the image
+        const x = (targetCanvas.width - scaledWidth) / 2;
+        const y = (targetCanvas.height - scaledHeight) / 2;
+
+        // Enable smooth scaling
+        tempCtx.imageSmoothingEnabled = true;
+        tempCtx.imageSmoothingQuality = "high";
+
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(img, x, y, scaledWidth, scaledHeight);
+
+        resolve(
+          tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
+        );
+      } catch (error) {
+        reject(error);
       }
-
-      const scale = Math.min(
-        targetCanvas.width / img.width,
-        targetCanvas.height / img.height
-      );
-
-      const scaledWidth = img.width * scale;
-      const scaledHeight = img.height * scale;
-
-      const x = (targetCanvas.width - scaledWidth) / 2;
-      const y = (targetCanvas.height - scaledHeight) / 2;
-
-      tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-      tempCtx.drawImage(img, x, y, scaledWidth, scaledHeight);
-
-      resolve(
-        tempCtx.getImageData(0, 0, targetCanvas.width, targetCanvas.height)
-      );
     };
     img.src = base64;
   });
@@ -55,7 +81,7 @@ export const normalizeCoordinates = (
   sourceHeight: number,
   targetWidth: number,
   targetHeight: number
-) => {
+): { x: number; y: number; scale: number } => {
   const scaleX = targetWidth / sourceWidth;
   const scaleY = targetHeight / sourceHeight;
   return {
@@ -67,25 +93,16 @@ export const normalizeCoordinates = (
 
 export const updateCanvasSize = (
   canvasRef: React.RefObject<HTMLCanvasElement>
-) => {
+): void => {
   const canvas = canvasRef.current;
   if (!canvas) return;
 
   const container = canvas.parentElement;
   if (!container) return;
 
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  // Save the current canvas content
-  const previousContent = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const oldWidth = canvas.width;
-  const oldHeight = canvas.height;
-
+  // Calculate new dimensions
   const containerWidth = container.clientWidth;
   const containerHeight = container.clientHeight;
-
-  // Calculate dimensions maintaining 16:9 aspect ratio
   let width = containerWidth;
   let height = containerWidth * (9 / 16);
 
@@ -94,25 +111,47 @@ export const updateCanvasSize = (
     width = containerHeight * (16 / 9);
   }
 
-  // Create a temporary canvas to hold the content
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = oldWidth;
-  tempCanvas.height = oldHeight;
-  const tempCtx = tempCanvas.getContext("2d");
-  if (!tempCtx) return;
+  // Skip if size hasn't changed
+  if (canvas.width === width && canvas.height === height) return;
 
-  // Copy the content to the temporary canvas
-  tempCtx.putImageData(previousContent, 0, 0);
+  try {
+    const ctx = get2DContext(canvas);
 
-  // Update the main canvas size
-  canvas.width = width;
-  canvas.height = height;
+    // Save current content
+    const previousContent = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const oldSize = { width: canvas.width, height: canvas.height };
 
-  // Reset context properties after resize
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.lineWidth = 2;
+    // Create and setup temporary canvas
+    const tempCanvas = createTempCanvas(oldSize);
+    const tempCtx = get2DContext(tempCanvas);
+    tempCtx.putImageData(previousContent, 0, 0);
 
-  // Draw the scaled content back to the main canvas
-  ctx.drawImage(tempCanvas, 0, 0, oldWidth, oldHeight, 0, 0, width, height);
+    // Update main canvas size
+    canvas.width = width;
+    canvas.height = height;
+
+    // Reset context properties
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.lineWidth = 2;
+
+    // Enable smooth scaling
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    // Draw scaled content back
+    ctx.drawImage(
+      tempCanvas,
+      0,
+      0,
+      oldSize.width,
+      oldSize.height,
+      0,
+      0,
+      width,
+      height
+    );
+  } catch (error) {
+    console.error("Error updating canvas size:", error);
+  }
 };
