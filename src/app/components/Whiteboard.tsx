@@ -16,7 +16,7 @@ type DrawingData = {
   isDrawing: boolean;
   isErasing: boolean;
   lineSize: number;
-  sourceWidth: number; // Add these new properties
+  sourceWidth: number;
   sourceHeight: number;
 };
 
@@ -129,7 +129,7 @@ export default function Whiteboard() {
       y,
       isDrawing: false,
       isErasing,
-      lineSize: isErasing ? currentSize : currentSize,
+      lineSize: currentSize, // Simplified
       sourceWidth: canvas.width,
       sourceHeight: canvas.height,
     });
@@ -162,7 +162,7 @@ export default function Whiteboard() {
       y,
       isDrawing: true,
       isErasing,
-      lineSize: isErasing ? currentSize : currentSize,
+      lineSize: currentSize,
       sourceWidth: canvas.width,
       sourceHeight: canvas.height,
     });
@@ -185,7 +185,6 @@ export default function Whiteboard() {
   };
 
   const undo = useCallback(() => {
-    console.log("undo");
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");

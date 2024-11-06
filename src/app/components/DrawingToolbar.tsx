@@ -5,12 +5,32 @@ import { Slider } from "@/components/ui/slider";
 import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-interface DrawingToolbarProps {
+type SizeSliderProps = {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+};
+
+function SizeSlider({ value, min, max, onChange }: SizeSliderProps) {
+  return (
+    <Slider
+      className="w-20"
+      value={[value]}
+      min={min}
+      max={max}
+      step={1}
+      onValueChange={(values) => onChange(values[0])}
+    />
+  );
+}
+
+type DrawingToolbarProps = {
   canUndo: boolean;
   onUndo: () => void;
   onClear: () => void;
   onToolChange: (config: { isErasing: boolean; size: number }) => void;
-}
+};
 
 export function DrawingToolbar({
   canUndo,
@@ -84,13 +104,11 @@ export function DrawingToolbar({
         </Button>
         <span>{`${lineSize}px`}</span>
         {!isErasing && (
-          <Slider
-            className="w-20"
-            defaultValue={[lineSize]}
+          <SizeSlider
+            value={lineSize}
             min={1}
             max={30}
-            step={1}
-            onValueChange={(value) => handleSizeChange(value[0])}
+            onChange={handleSizeChange}
           />
         )}
         <Button
@@ -104,13 +122,11 @@ export function DrawingToolbar({
         </Button>
         <span>{`${eraserSize}px`}</span>
         {isErasing && (
-          <Slider
-            className="w-20"
-            defaultValue={[eraserSize]}
+          <SizeSlider
+            value={eraserSize}
             min={1}
             max={100}
-            step={1}
-            onValueChange={(value) => handleSizeChange(value[0])}
+            onChange={handleSizeChange}
           />
         )}
       </div>
