@@ -6,6 +6,7 @@ import {
   base64ToImageData,
   imageDataToBase64,
   normalizeCoordinates,
+  updateCanvasSize,
 } from "@/utils/canvas";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Canvas from "../Canvas";
@@ -30,34 +31,8 @@ export default function Whiteboard() {
   const [drawingEnabled, setDrawingEnabled] = useState(false);
   const { socket } = useSocket();
 
-  const updateCanvasSize = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const container = canvas.parentElement;
-    if (!container) return;
-
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-
-    // Calculate dimensions maintaining 16:9 aspect ratio
-    let width = containerWidth;
-    let height = containerWidth * (9 / 16);
-
-    if (height > containerHeight) {
-      height = containerHeight;
-      width = containerHeight * (16 / 9);
-    }
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.lineWidth = 2;
+  const updateCanvasSizeCallback = useCallback(() => {
+    updateCanvasSize(canvasRef);
   }, []);
 
   const handleDrawOperation = useCallback(
@@ -230,13 +205,13 @@ export default function Whiteboard() {
   );
 
   useEffect(() => {
-    updateCanvasSize();
-    window.addEventListener("resize", updateCanvasSize);
+    updateCanvasSizeCallback();
+    window.addEventListener("resize", updateCanvasSizeCallback);
 
     return () => {
-      window.removeEventListener("resize", updateCanvasSize);
+      window.removeEventListener("resize", updateCanvasSizeCallback);
     };
-  }, [updateCanvasSize]);
+  }, [updateCanvasSizeCallback]);
 
   useEffect(() => {
     if (!socket) return;
