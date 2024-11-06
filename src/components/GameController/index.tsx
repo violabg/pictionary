@@ -30,6 +30,7 @@ export type GameState = {
 
 const DEFAULT_ROUND_DURATION = 120;
 const POINTS_MULTIPLIER = 20;
+
 const getInitialState = (roundDuration: number) => {
   const state: GameState = {
     // players: [],
@@ -57,11 +58,11 @@ const getInitialState = (roundDuration: number) => {
   return state;
 };
 
-interface GameControllerProps {
+type GameControllerProps = {
   onNextRound: () => void;
   onDrawingEnabledChange: (enabled: boolean) => void;
   roundDuration?: number;
-}
+};
 
 export function GameController({
   onDrawingEnabledChange,
@@ -187,6 +188,7 @@ export function GameController({
     onNextRound();
   };
 
+  // Add a separate effect for handling keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "+" && !gameState.isGameActive) {
@@ -199,7 +201,15 @@ export function GameController({
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, [gameState.isGameActive]);
 
-  // Split the socket effect into two separate effects
+  // Emit game state updates when drawing enabled state changes
+  useEffect(() => {
+    socket?.emit("game-state-update", {
+      ...gameState,
+      drawingEnabled: shouldEnableDrawing,
+    });
+  }, [socket, gameState, shouldEnableDrawing]);
+
+  // handle game state updates via socket
   useEffect(() => {
     if (!socket) return;
 
@@ -220,17 +230,10 @@ export function GameController({
     };
   }, [socket]);
 
-  // Add a separate effect for handling drawing enabled state
+  // dispatch drawing enabled on shouldEnableDrawing change
   useEffect(() => {
     onDrawingEnabledChange(shouldEnableDrawing);
   }, [shouldEnableDrawing, onDrawingEnabledChange]);
-
-  useEffect(() => {
-    socket?.emit("game-state-update", {
-      ...gameState,
-      drawingEnabled: shouldEnableDrawing,
-    });
-  }, [socket, gameState, shouldEnableDrawing]);
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">

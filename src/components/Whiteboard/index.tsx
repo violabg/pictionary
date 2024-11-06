@@ -244,6 +244,7 @@ export default function Whiteboard() {
     };
   }, []);
 
+  // handleing socket events
   useEffect(() => {
     if (!socket) return;
 
