@@ -77,84 +77,91 @@ export default function Whiteboard() {
     ctx.lineWidth = 2;
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawingEnabled) return;
+  const handleDrawOperation = useCallback(
+    (drawingData: DrawingData, canvas: HTMLCanvasElement) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+      const {
+        x: normalizedX,
+        y: normalizedY,
+        scale,
+      } = normalizeCoordinates(
+        drawingData.x,
+        drawingData.y,
+        drawingData.sourceWidth,
+        drawingData.sourceHeight,
+        canvas.width,
+        canvas.height
+      );
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const normalizedLineSize = drawingData.lineSize * scale;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+      ctx.globalCompositeOperation = drawingData.isErasing
+        ? "destination-out"
+        : "source-over";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = normalizedLineSize;
 
-    socket?.emit("draw-line", {
-      x,
-      y,
-      isDrawing: false,
-      isErasing,
-      lineSize: isErasing ? eraserSize : lineSize,
-      sourceWidth: canvas.width, // Add these
-      sourceHeight: canvas.height,
-    });
+      if (!drawingData.isDrawing) {
+        ctx.beginPath();
+        ctx.moveTo(normalizedX, normalizedY);
+      } else {
+        ctx.lineTo(normalizedX, normalizedY);
+        ctx.stroke();
+      }
+    },
+    []
+  );
 
-    if (isErasing) {
-      ctx.globalCompositeOperation = "destination-out";
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-    }
+  const emitDrawOperation = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>, isDrawingActive: boolean) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    setIsDrawing(true);
-  };
+      const rect = canvas.getBoundingClientRect();
+      const drawData: DrawingData = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        isDrawing: isDrawingActive,
+        isErasing,
+        lineSize: isErasing ? eraserSize : lineSize,
+        sourceWidth: canvas.width,
+        sourceHeight: canvas.height,
+      };
 
-  const updateCursor = (e: React.MouseEvent) => {
+      socket?.emit("draw-line", drawData);
+      handleDrawOperation(drawData, canvas);
+    },
+    [eraserSize, handleDrawOperation, isErasing, lineSize, socket]
+  );
+
+  const startDrawing = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!drawingEnabled) return;
+      setIsDrawing(true);
+      emitDrawOperation(e, false);
+    },
+    [drawingEnabled, emitDrawOperation]
+  );
+
+  const updateCursor = useCallback((e: React.MouseEvent) => {
     if (cursorRef.current) {
       setCursorPosition({
         x: e.clientX,
         y: e.clientY,
       });
     }
-  };
+  }, []);
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    updateCursor(e);
-    if (!isDrawing || !drawingEnabled) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    socket?.emit("draw-line", {
-      x,
-      y,
-      isDrawing: true,
-      isErasing,
-      lineSize: isErasing ? eraserSize : lineSize,
-      sourceWidth: canvas.width, // Add these
-      sourceHeight: canvas.height,
-    });
-
-    if (isErasing) {
-      ctx.globalCompositeOperation = "destination-out";
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-    }
-
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = isErasing ? eraserSize : lineSize;
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
+  const draw = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      updateCursor(e);
+      if (!isDrawing || !drawingEnabled) return;
+      emitDrawOperation(e, true);
+    },
+    [drawingEnabled, emitDrawOperation, isDrawing, updateCursor]
+  );
 
   const stopDrawing = () => {
     if (isDrawing) {
@@ -273,39 +280,7 @@ export default function Whiteboard() {
     socket.on("draw-line", (drawingData: DrawingData) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Normalize coordinates and line size based on canvas dimensions
-      const {
-        x: normalizedX,
-        y: normalizedY,
-        scale,
-      } = normalizeCoordinates(
-        drawingData.x,
-        drawingData.y,
-        drawingData.sourceWidth,
-        drawingData.sourceHeight,
-        canvas.width,
-        canvas.height
-      );
-
-      const normalizedLineSize = drawingData.lineSize * scale;
-
-      ctx.globalCompositeOperation = drawingData.isErasing
-        ? "destination-out"
-        : "source-over";
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = normalizedLineSize;
-
-      if (!drawingData.isDrawing) {
-        ctx.beginPath();
-        ctx.moveTo(normalizedX, normalizedY);
-      } else {
-        ctx.lineTo(normalizedX, normalizedY);
-        ctx.stroke();
-      }
+      handleDrawOperation(drawingData, canvas);
     });
 
     socket.on("undo-drawing", async (data: { history: string[] }) => {
@@ -350,8 +325,9 @@ export default function Whiteboard() {
       socket.off("draw-line");
       socket.off("undo-drawing");
       socket.off("clear-canvas");
+      socket.off("game-state-update");
     };
-  }, [clearCanvas, drawingEnabled, socket]);
+  }, [clearCanvas, drawingEnabled, handleDrawOperation, socket]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
