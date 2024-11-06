@@ -1,29 +1,8 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-
-type SizeSliderProps = {
-  value: number;
-  min: number;
-  max: number;
-  onChange: (value: number) => void;
-};
-
-function SizeSlider({ value, min, max, onChange }: SizeSliderProps) {
-  return (
-    <Slider
-      className="w-20"
-      value={[value]}
-      min={min}
-      max={max}
-      step={1}
-      onValueChange={(values) => onChange(values[0])}
-    />
-  );
-}
+import { SizeSlider } from "./DrawingToolbar/SizeSlider";
 
 type DrawingToolbarProps = {
   canUndo: boolean;
@@ -53,14 +32,17 @@ export function DrawingToolbar({
     [eraserSize, lineSize, onToolChange]
   );
 
-  const handleSizeChange = (size: number) => {
-    if (isErasing) {
-      setEraserSize(size);
-    } else {
-      setLineSize(size);
-    }
-    onToolChange({ isErasing, size });
-  };
+  const handleSizeChange = useCallback(
+    (size: number) => {
+      if (isErasing) {
+        setEraserSize(size);
+      } else {
+        setLineSize(size);
+      }
+      onToolChange({ isErasing, size });
+    },
+    [isErasing, onToolChange]
+  );
 
   // Add useEffect for keyboard shortcuts
   useEffect(() => {
