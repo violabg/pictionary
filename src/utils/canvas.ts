@@ -13,14 +13,19 @@ export const base64ToImageData = (
   base64: string,
   targetCanvas: HTMLCanvasElement
 ): Promise<ImageData> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    // Add reject handler
     const img = new Image();
+    img.onerror = () => reject(new Error("Failed to load image")); // Add error handling
     img.onload = () => {
       const tempCanvas = document.createElement("canvas");
       tempCanvas.width = targetCanvas.width;
       tempCanvas.height = targetCanvas.height;
       const tempCtx = tempCanvas.getContext("2d");
-      if (!tempCtx) return;
+      if (!tempCtx) {
+        reject(new Error("Failed to get canvas context")); // Add error handling
+        return;
+      }
 
       // Calculate scaled dimensions while maintaining aspect ratio
       const scale = Math.min(
