@@ -1,10 +1,10 @@
 "use client";
 
-import { Timer } from "@/components/Timer";
 import { Button } from "@/components/ui/button";
 import { useSocket } from "@/contexts/SocketContext";
 import { Clock, Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Timer } from "../Timer";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
@@ -176,6 +176,17 @@ export function GameController({
     }));
   };
 
+  const onNewGame = () => {
+    setGameState((prev) => ({
+      ...prev,
+      isGameOver: false,
+      playedRounds: 0,
+      players: prev.players.map((p) => ({ ...p, score: 0 })),
+    }));
+    // Reset the drawing enabled state
+    onNextRound();
+  };
+
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "+" && !gameState.isGameActive) {
@@ -237,14 +248,7 @@ export function GameController({
       {gameState.isGameOver ? (
         <GameOver
           players={[...gameState.players].sort((a, b) => b.score - a.score)}
-          onNewGame={() => {
-            setGameState((prev) => ({
-              ...prev,
-              isGameOver: false,
-              playedRounds: 0,
-              players: prev.players.map((p) => ({ ...p, score: 0 })),
-            }));
-          }}
+          onNewGame={onNewGame}
         />
       ) : (
         <>
