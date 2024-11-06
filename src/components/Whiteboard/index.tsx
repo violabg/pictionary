@@ -184,21 +184,26 @@ export default function Whiteboard() {
     setHistory((prev) => [...prev, imageData]);
   };
 
-  const undo = useCallback(() => {
+  const updateCanvasFromHistory = (history: ImageData[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    if (!ctx || history.length === 0) return;
+    if (!ctx) return;
 
-    const previousState = history[history.length - 2];
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (previousState) {
-      ctx.putImageData(previousState, 0, 0);
+    if (history.length > 0) {
+      const lastState = history[history.length - 1];
+      ctx.putImageData(lastState, 0, 0);
     }
+  };
+
+  const undo = useCallback(() => {
+    if (history.length === 0) return;
 
     const newHistory = history.slice(0, -1);
     setHistory(newHistory);
+    updateCanvasFromHistory(newHistory);
 
     // Convert history to base64 strings before sending
     const base64History = newHistory.map(imageDataToBase64);
@@ -255,11 +260,6 @@ export default function Whiteboard() {
     socket.on("undo-drawing", async (data: { history: string[] }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Clear the canvas first
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const newHistory: ImageData[] = [];
 
@@ -273,13 +273,8 @@ export default function Whiteboard() {
         }
       }
 
-      // Apply the last state if available
-      if (newHistory.length > 0) {
-        const lastState = newHistory[newHistory.length - 1];
-        ctx.putImageData(lastState, 0, 0);
-      }
-
       setHistory(newHistory);
+      updateCanvasFromHistory(newHistory);
     });
 
     socket.on("game-state-update", (gameState: GameState) => {
