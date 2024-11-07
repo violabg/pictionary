@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useSocket } from "@/contexts/SocketContext";
 import { Clock, Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Timer } from "../Timer";
@@ -13,6 +12,7 @@ export type Player = {
   id: string;
   name: string;
   score: number;
+  hasPlayed?: boolean;
 };
 
 export type GameState = {
@@ -28,167 +28,29 @@ export type GameState = {
   drawingEnabled?: boolean;
 };
 
-const DEFAULT_ROUND_DURATION = 120;
-const POINTS_MULTIPLIER = 20;
-
-const getInitialState = (roundDuration: number) => {
-  const state: GameState = {
-    // players: [],
-    players: [
-      {
-        id: "1",
-        name: "Player 1",
-        score: 0,
-      },
-      {
-        id: "2",
-        name: "Player 2",
-        score: 0,
-      },
-    ],
-    currentDrawer: null,
-    nextDrawer: null,
-    isGameActive: false,
-    isPaused: false,
-    playedRounds: 0,
-    isGameOver: false,
-    timeLeft: roundDuration,
-    currentRoundDuration: roundDuration,
-  };
-  return state;
-};
-
-type GameControllerProps = {
-  onNextRound: () => void;
-  onDrawingEnabledChange: (enabled: boolean) => void;
-  roundDuration?: number;
+type Props = {
+  gameState: GameState;
+  onStartRound: () => void;
+  onTimeUp: () => void;
+  onNewGame: () => void;
+  onAddPlayer: (name: string) => void;
+  onSetTimeLeft: (seconds: number) => void;
+  onSetTimer: (seconds: number) => void;
 };
 
 export function GameController({
-  onDrawingEnabledChange,
-  onNextRound,
-  roundDuration = DEFAULT_ROUND_DURATION,
-}: GameControllerProps) {
-  const [gameState, setGameState] = useState<GameState>(
-    getInitialState(roundDuration)
-  );
-  // Add new state to track drawing enabled status
-  const [shouldEnableDrawing, setShouldEnableDrawing] = useState(false);
+  gameState,
+  onStartRound,
+  onTimeUp,
+  onNewGame,
+  onAddPlayer,
+  onSetTimeLeft,
+  onSetTimer,
+}: Props) {
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
 
-  const { socket } = useSocket();
-
-  const addPlayer = (name: string) => {
-    const newPlayer: Player = {
-      id: Date.now().toString(),
-      name,
-      score: 0,
-    };
-    setGameState((prev) => ({
-      ...prev,
-      players: [...prev.players, newPlayer],
-    }));
-  };
-
-  const selectNextDrawer = () => {
-    const availablePlayers = gameState.players.filter(
-      (p) => p.id !== gameState.currentDrawer?.id
-    );
-    return availablePlayers[
-      Math.floor(Math.random() * availablePlayers.length)
-    ];
-  };
-
-  const startRound = () => {
-    if (gameState.players.length < 2) {
-      alert("Need at least 2 players to start!");
-      return;
-    }
-
-    const drawer = gameState.nextDrawer || gameState.players[0];
-
-    setGameState((prev) => ({
-      ...prev,
-      currentDrawer: drawer,
-      nextDrawer: null,
-      isGameActive: true,
-      isPaused: false,
-      timeLeft: prev.currentRoundDuration,
-    }));
-    setShouldEnableDrawing(true);
-    onNextRound();
-  };
-
-  const calculateScore = (timeLeft: number) => {
-    return Math.round(
-      (timeLeft / gameState.currentRoundDuration) * POINTS_MULTIPLIER
-    );
-  };
-
-  const handleTimeUp = () => {
-    setGameState((prev) => {
-      const newState = { ...prev };
-      // If there is a current drawer, calculate and update their score
-      if (prev.currentDrawer) {
-        const points = calculateScore(prev.timeLeft);
-        newState.players = prev.players.map((player) =>
-          player.id === prev.currentDrawer?.id
-            ? { ...player, score: player.score + points }
-            : player
-        );
-      }
-
-      // Check if there are at least 2 players to continue the game
-      if (prev.players.length >= 2) {
-        const newPlayedRounds = prev.playedRounds + 1;
-        const totalRounds = prev.players.length;
-
-        // If all players have drawn, end the game
-        if (newPlayedRounds >= totalRounds) {
-          newState.isGameOver = true;
-          newState.isGameActive = false;
-          setShouldEnableDrawing(false);
-          return newState;
-        }
-
-        // Select the next drawer and pause the game
-        const next = selectNextDrawer();
-        newState.playedRounds = newPlayedRounds;
-        newState.nextDrawer = next;
-        newState.isPaused = true;
-      } else {
-        // If there are less than 2 players, end the game
-        newState.isGameActive = false;
-        newState.currentDrawer = null;
-      }
-
-      // Disable drawing
-      setShouldEnableDrawing(false);
-      return newState;
-    });
-  };
-
-  const handleSetTimer = (seconds: number) => {
-    setGameState((prev) => ({
-      ...prev,
-      currentRoundDuration: seconds,
-      timeLeft: seconds,
-    }));
-  };
-
-  const onNewGame = () => {
-    setGameState((prev) => ({
-      ...prev,
-      isGameOver: false,
-      playedRounds: 0,
-      players: prev.players.map((p) => ({ ...p, score: 0 })),
-    }));
-    // Reset the drawing enabled state
-    onNextRound();
-  };
-
-  // Add a separate effect for handling keyboard shortcuts
+  // Keep only the keyboard shortcut effect
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "+" && !gameState.isGameActive) {
@@ -200,40 +62,6 @@ export function GameController({
     window.addEventListener("keypress", handleKeyPress);
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, [gameState.isGameActive]);
-
-  // Emit game state updates when drawing enabled state changes
-  useEffect(() => {
-    socket?.emit("game-state-update", {
-      ...gameState,
-      drawingEnabled: shouldEnableDrawing,
-    });
-  }, [socket, gameState, shouldEnableDrawing]);
-
-  // handle game state updates via socket
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("game-state-update", (newGameState: GameState) => {
-      setGameState((prev) => {
-        if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
-          return prev;
-        }
-        if (typeof newGameState.drawingEnabled === "boolean") {
-          setShouldEnableDrawing(newGameState.drawingEnabled);
-        }
-        return newGameState;
-      });
-    });
-
-    return () => {
-      socket.off("game-state-update");
-    };
-  }, [socket]);
-
-  // dispatch drawing enabled on shouldEnableDrawing change
-  useEffect(() => {
-    onDrawingEnabledChange(shouldEnableDrawing);
-  }, [shouldEnableDrawing, onDrawingEnabledChange]);
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
@@ -260,7 +88,7 @@ export function GameController({
               disabled={gameState.players.length < 2}
               size="sm"
               variant={"secondary"}
-              onClick={startRound}
+              onClick={onStartRound}
             >
               <Play />
               Start Game
@@ -276,14 +104,14 @@ export function GameController({
                 className="w-full"
                 size="sm"
                 variant={"secondary"}
-                onClick={startRound}
+                onClick={onStartRound}
               >
                 <Play />
                 {"I'm Ready"}
               </Button>
             </div>
           ) : (
-            <Button onClick={handleTimeUp} size="sm" variant="destructive">
+            <Button onClick={onTimeUp} size="sm" variant="destructive">
               <Pause />
               End Round
             </Button>
@@ -297,10 +125,8 @@ export function GameController({
             <div className="bg-white/90 p-4 rounded-lg">
               <Timer
                 timeLeft={gameState.timeLeft}
-                setTimeLeft={(time) =>
-                  setGameState((prev) => ({ ...prev, timeLeft: time }))
-                }
-                onTimeUp={handleTimeUp}
+                setTimeLeft={onSetTimeLeft}
+                onTimeUp={onTimeUp}
                 isActive={gameState.isGameActive && !gameState.isPaused}
               />
             </div>
@@ -321,23 +147,25 @@ export function GameController({
               </div>
             ))}
           </div>
-          <Button
-            onClick={() => setIsAddPlayerOpen(true)}
-            size="sm"
-            title="Add Player (+)"
-          >
-            <UserPlus />
-            Add Player
-          </Button>
+          {!gameState.isGameActive && (
+            <Button
+              onClick={() => setIsAddPlayerOpen(true)}
+              size="sm"
+              title="Add Player (+)"
+            >
+              <UserPlus />
+              Add Player
+            </Button>
+          )}
           <AddPlayerDialog
             open={isAddPlayerOpen}
             onOpenChange={setIsAddPlayerOpen}
-            onAddPlayer={addPlayer}
+            onAddPlayer={onAddPlayer}
           />
           <TimerSettings
             open={isTimerSettingsOpen}
             onOpenChange={setIsTimerSettingsOpen}
-            onSetTimer={handleSetTimer}
+            onSetTimer={onSetTimer}
             currentTime={gameState.currentRoundDuration}
           />
         </>

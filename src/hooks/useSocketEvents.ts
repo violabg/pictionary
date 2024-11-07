@@ -11,6 +11,9 @@ interface UseSocketEventsParams {
   setDrawingEnabled: (enabled: boolean) => void;
   setHistory: (history: ImageData[]) => void;
   updateCanvasFromHistory: (history: ImageData[]) => void;
+  gameState: GameState;
+  shouldEnableDrawing: boolean;
+  onGameStateUpdate: (state: GameState) => void;
 }
 
 export function useSocketEvents({
@@ -20,6 +23,9 @@ export function useSocketEvents({
   setHistory,
   setDrawingEnabled,
   updateCanvasFromHistory,
+  gameState,
+  shouldEnableDrawing,
+  onGameStateUpdate,
 }: UseSocketEventsParams) {
   const { socket } = useSocket();
 
@@ -50,8 +56,8 @@ export function useSocketEvents({
       updateCanvasFromHistory(newHistory);
     };
 
-    const handleGameStateUpdate = (gameState: GameState) => {
-      setDrawingEnabled(gameState.drawingEnabled ?? false);
+    const handleGameStateUpdate = (newGameState: GameState) => {
+      onGameStateUpdate(newGameState);
     };
 
     socket.on("draw-line", handleDrawLine);
@@ -73,6 +79,9 @@ export function useSocketEvents({
     setHistory,
     updateCanvasFromHistory,
     setDrawingEnabled,
+    gameState,
+    shouldEnableDrawing,
+    onGameStateUpdate,
   ]);
 
   return socket;

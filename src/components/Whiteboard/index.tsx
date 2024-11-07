@@ -3,6 +3,7 @@
 import { GameController } from "@/components/GameController";
 import { useSocket } from "@/contexts/SocketContext";
 import { useDrawing } from "@/hooks/useDrawing";
+import { useGameState } from "@/hooks/useGameState";
 import { useSocketEvents } from "@/hooks/useSocketEvents";
 import { imageDataToBase64, updateCanvasSize } from "@/utils/canvas";
 import { useCallback, useEffect, useRef } from "react";
@@ -12,6 +13,12 @@ import { DrawingToolbar } from "../DrawingToolbar";
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { socket } = useSocket();
+
+  const {
+    gameState,
+    shouldEnableDrawing,
+    actions: gameActions,
+  } = useGameState();
 
   const {
     currentSize,
@@ -104,7 +111,14 @@ export default function Whiteboard() {
     setHistory,
     setDrawingEnabled,
     canvasRef,
+    gameState,
+    shouldEnableDrawing,
+    onGameStateUpdate: gameActions.updateGameState,
   });
+
+  useEffect(() => {
+    setDrawingEnabled(shouldEnableDrawing);
+  }, [shouldEnableDrawing, setDrawingEnabled]);
 
   return (
     <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
@@ -116,8 +130,19 @@ export default function Whiteboard() {
       />
       <aside className="self-stretch">
         <GameController
-          onDrawingEnabledChange={setDrawingEnabled}
-          onNextRound={clear}
+          gameState={gameState}
+          onStartRound={() => {
+            gameActions.startRound();
+            clear();
+          }}
+          onTimeUp={gameActions.handleTimeUp}
+          onNewGame={() => {
+            gameActions.newGame();
+            clear();
+          }}
+          onAddPlayer={gameActions.addPlayer}
+          onSetTimeLeft={gameActions.setTimeLeft}
+          onSetTimer={gameActions.setTimer}
         />
       </aside>
       <Canvas
