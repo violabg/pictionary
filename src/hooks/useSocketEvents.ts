@@ -1,4 +1,4 @@
-import { useSocket } from "@/contexts/SocketContext";
+import { useSupabase } from "@/contexts/SupabaseContext";
 import { DrawingData, GameState } from "@/types";
 import { base64ToImageData } from "@/utils/canvas";
 import { useEffect } from "react";
@@ -20,10 +20,10 @@ export function useSocketEvents({
   setHistory,
   updateCanvasFromHistory,
 }: UseSocketEventsParams) {
-  const { socket } = useSocket();
+  const { channel } = useSupabase();
 
   useEffect(() => {
-    if (!socket) return;
+    if (!channel) return;
 
     const handleDrawLine = (drawingData: DrawingData) => {
       handleDrawOperation(drawingData, true);
@@ -53,16 +53,22 @@ export function useSocketEvents({
       onGameStateUpdate(newGameState);
     };
 
-    socket.on("draw-line", handleDrawLine);
-    socket.on("undo-drawing", handleUndoDrawing);
-    socket.on("game-state-update", handleGameStateUpdate);
-    socket.on("clear-canvas", clearCanvas);
+    channel.on("broadcast", { event: "draw-line" }, ({ payload }) => {
+      console.log("draw-line payload :>> ", payload);
+      handleDrawLine(payload);
+    });
+    channel.on("broadcast", { event: "undo-drawing" }, ({ payload }) => {
+      handleUndoDrawing(payload);
+    });
+    channel.on("broadcast", { event: "game-state-update" }, ({ payload }) => {
+      handleGameStateUpdate(payload);
+    });
+    channel.on("broadcast", { event: "clear-canvas" }, () => {
+      clearCanvas();
+    });
 
     return () => {
-      socket.off("draw-line", handleDrawLine);
-      socket.off("undo-drawing", handleUndoDrawing);
-      socket.off("game-state-update", handleGameStateUpdate);
-      socket.off("clear-canvas", clearCanvas);
+      channel.unsubscribe();
     };
   }, [
     canvasRef,
@@ -70,9 +76,9 @@ export function useSocketEvents({
     handleDrawOperation,
     onGameStateUpdate,
     setHistory,
-    socket,
+    channel,
     updateCanvasFromHistory,
   ]);
 
-  return socket;
+  return channel;
 }

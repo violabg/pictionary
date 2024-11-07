@@ -1,4 +1,4 @@
-import { useSocket } from "@/contexts/SocketContext";
+import { useSupabase } from "@/contexts/SupabaseContext";
 import { CanvasOperation, DrawingData, DrawingSettings } from "@/types";
 import {
   get2DContext,
@@ -9,7 +9,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
-  const { socket } = useSocket();
+  const { channel } = useSupabase();
   const [isDrawing, setIsDrawing] = useState(false);
   const canvas = canvasRef.current;
 
@@ -74,14 +74,18 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
       });
 
       if (!isRemoteEvent) {
-        socket?.emit("draw-line", {
-          ...drawingData,
-          sourceWidth: canvas.width,
-          sourceHeight: canvas.height,
+        channel?.send({
+          type: "broadcast",
+          event: "draw-line",
+          payload: {
+            ...drawingData,
+            sourceWidth: canvas.width,
+            sourceHeight: canvas.height,
+          },
         });
       }
     },
-    [canvas, socket, executeCanvasOperation]
+    [canvas, channel, executeCanvasOperation]
   );
 
   const handleMouseEvent = useCallback(
@@ -166,8 +170,11 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
 
   const clear = useCallback(() => {
     clearCanvas();
-    socket?.emit("clear-canvas");
-  }, [clearCanvas, socket]);
+    channel?.send({
+      type: "broadcast",
+      event: "clear-canvas",
+    });
+  }, [clearCanvas, channel]);
 
   const undo = useCallback(() => {
     if (history.length === 0) return;
@@ -177,8 +184,12 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     updateCanvasFromHistory(newHistory);
 
     const base64History = newHistory.map(imageDataToBase64);
-    socket?.emit("undo-drawing", { history: base64History });
-  }, [history, updateCanvasFromHistory, socket]);
+    channel?.send({
+      type: "broadcast",
+      event: "undo-drawing",
+      payload: { history: base64History },
+    });
+  }, [history, updateCanvasFromHistory, channel]);
 
   const updateCanvasSizeCallback = useCallback(() => {
     if (!canvas) return;

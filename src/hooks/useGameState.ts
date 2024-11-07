@@ -1,6 +1,6 @@
-import { useSocket } from "@/contexts/SocketContext";
+import { useSupabase } from "@/contexts/SupabaseContext";
 import { GameState, Player } from "@/types";
-import { useEffect, useReducer } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 
 // Constants
 const DEFAULT_ROUND_DURATION = 120;
@@ -140,37 +140,43 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 };
 
 export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
-  const { socket } = useSocket();
+  const { channel } = useSupabase();
   const [gameState, dispatch] = useReducer(
     gameReducer,
     getInitialState(roundDuration)
   );
 
-  // Action creators - simplified without useCallback
-  const actions = {
-    addPlayer: (name: string) =>
-      dispatch({ type: "ADD_PLAYER", payload: name }),
+  const actions = useMemo(
+    () => ({
+      addPlayer: (name: string) =>
+        dispatch({ type: "ADD_PLAYER", payload: name }),
 
-    startRound: () => dispatch({ type: "START_ROUND" }),
+      startRound: () => dispatch({ type: "START_ROUND" }),
 
-    handleTimeUp: (timeLeft: number) =>
-      dispatch({ type: "TIME_UP", payload: timeLeft }),
+      handleTimeUp: (timeLeft: number) =>
+        dispatch({ type: "TIME_UP", payload: timeLeft }),
 
-    setTimeLeft: (seconds: number) =>
-      dispatch({ type: "SET_TIME_LEFT", payload: seconds }),
+      setTimeLeft: (seconds: number) =>
+        dispatch({ type: "SET_TIME_LEFT", payload: seconds }),
 
-    setTimer: (seconds: number) =>
-      dispatch({ type: "SET_TIMER", payload: seconds }),
+      setTimer: (seconds: number) =>
+        dispatch({ type: "SET_TIMER", payload: seconds }),
 
-    newGame: () => dispatch({ type: "NEW_GAME" }),
+      newGame: () => dispatch({ type: "NEW_GAME" }),
 
-    updateGameState: (newGameState: GameState) =>
-      dispatch({ type: "UPDATE_GAME_STATE", payload: newGameState }),
-  };
+      updateGameState: (newGameState: GameState) =>
+        dispatch({ type: "UPDATE_GAME_STATE", payload: newGameState }),
+    }),
+    [dispatch]
+  );
 
   useEffect(() => {
-    socket?.emit("game-state-update", gameState);
-  }, [socket, gameState]);
+    channel?.send({
+      type: "broadcast",
+      event: "game-state-update",
+      payload: gameState,
+    });
+  }, [channel, gameState]);
 
   return { gameState, actions };
 }

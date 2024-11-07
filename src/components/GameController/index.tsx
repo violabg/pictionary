@@ -41,7 +41,7 @@ export function GameController({
     window.addEventListener("keypress", handleKeyPress);
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, [gameState.isGameActive]);
-  console.log("object");
+
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
       {!gameState.isGameActive && (

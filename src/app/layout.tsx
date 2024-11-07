@@ -1,4 +1,4 @@
-import { SocketProvider } from "@/contexts/SocketContext";
+import { SupabaseProvider } from "@/contexts/SupabaseContext";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -29,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SocketProvider>{children}</SocketProvider>
+        <SupabaseProvider>{children}</SupabaseProvider>
       </body>
     </html>
   );

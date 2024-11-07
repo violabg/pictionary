@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Player } from "@/types/game";
+import { Player } from "@/types";
 import { Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";

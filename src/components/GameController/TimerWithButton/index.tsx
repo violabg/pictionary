@@ -1,6 +1,6 @@
 import { Timer } from "@/components/Timer";
 import { Button } from "@/components/ui/button";
-import { GameState } from "@/types/game";
+import { GameState } from "@/types";
 import { Pause } from "lucide-react";
 import { useState } from "react";
 
