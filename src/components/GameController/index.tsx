@@ -236,7 +236,7 @@ export function GameController({
   }, [shouldEnableDrawing, onDrawingEnabledChange]);
 
   return (
-    <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px]">
+    <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
       {!gameState.isGameActive && (
         <Button
           onClick={() => setIsTimerSettingsOpen(true)}

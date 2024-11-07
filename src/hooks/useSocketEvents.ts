@@ -5,21 +5,21 @@ import { base64ToImageData } from "@/utils/canvas";
 import { useEffect } from "react";
 
 interface UseSocketEventsParams {
-  handleDrawOperation: (drawingData: DrawingData, flag: boolean) => void;
-  clearCanvas: () => void;
-  updateCanvasFromHistory: (history: ImageData[]) => void;
-  setHistory: (history: ImageData[]) => void;
-  setDrawingEnabled: (enabled: boolean) => void;
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  clearCanvas: () => void;
+  handleDrawOperation: (drawingData: DrawingData, flag: boolean) => void;
+  setDrawingEnabled: (enabled: boolean) => void;
+  setHistory: (history: ImageData[]) => void;
+  updateCanvasFromHistory: (history: ImageData[]) => void;
 }
 
 export function useSocketEvents({
-  handleDrawOperation,
+  canvasRef,
   clearCanvas,
-  updateCanvasFromHistory,
+  handleDrawOperation,
   setHistory,
   setDrawingEnabled,
-  canvasRef,
+  updateCanvasFromHistory,
 }: UseSocketEventsParams) {
   const { socket } = useSocket();
 

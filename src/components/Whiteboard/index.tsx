@@ -114,7 +114,7 @@ export default function Whiteboard() {
         onClear={clear}
         onToolChange={handleToolChange}
       />
-      <aside className="self-start">
+      <aside className="self-stretch">
         <GameController
           onDrawingEnabledChange={setDrawingEnabled}
           onNextRound={clear}
