@@ -7,20 +7,18 @@ interface UseSocketEventsParams {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   clearCanvas: () => void;
   handleDrawOperation: (drawingData: DrawingData, flag: boolean) => void;
+  onGameStateUpdate: (state: GameState) => void;
   setHistory: (history: ImageData[]) => void;
   updateCanvasFromHistory: (history: ImageData[]) => void;
-  gameState: GameState;
-  onGameStateUpdate: (state: GameState) => void;
 }
 
 export function useSocketEvents({
   canvasRef,
   clearCanvas,
   handleDrawOperation,
+  onGameStateUpdate,
   setHistory,
   updateCanvasFromHistory,
-  gameState,
-  onGameStateUpdate,
 }: UseSocketEventsParams) {
   const { socket } = useSocket();
 
@@ -67,14 +65,13 @@ export function useSocketEvents({
       socket.off("clear-canvas", clearCanvas);
     };
   }, [
-    socket,
-    handleDrawOperation,
-    clearCanvas,
     canvasRef,
-    setHistory,
-    updateCanvasFromHistory,
-    gameState,
+    clearCanvas,
+    handleDrawOperation,
     onGameStateUpdate,
+    setHistory,
+    socket,
+    updateCanvasFromHistory,
   ]);
 
   return socket;

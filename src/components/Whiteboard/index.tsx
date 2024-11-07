@@ -30,13 +30,12 @@ export default function Whiteboard() {
   } = useCanvas(canvasRef);
 
   useSocketEvents({
-    handleDrawOperation,
-    clearCanvas,
-    updateCanvasFromHistory,
-    setHistory,
     canvasRef,
-    gameState,
+    clearCanvas,
+    handleDrawOperation,
     onGameStateUpdate: gameActions.updateGameState,
+    setHistory,
+    updateCanvasFromHistory,
   });
 
   const handleToolChange = ({
