@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { GameState } from "@/types/game";
+import { GameState } from "@/types";
 import { Clock, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";

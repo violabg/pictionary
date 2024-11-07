@@ -1,28 +1,46 @@
 import { useSocket } from "@/contexts/SocketContext";
-import { DrawingData } from "@/types/drawing";
-import { imageDataToBase64, normalizeCoordinates } from "@/utils/canvas";
+import { CanvasOperation, DrawingData, DrawingSettings } from "@/types";
+import {
+  get2DContext,
+  imageDataToBase64,
+  normalizeCoordinates,
+  updateCanvasSize,
+} from "@/utils/canvas";
 import { useCallback, useEffect, useState } from "react";
 
 export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   const { socket } = useSocket();
   const [isDrawing, setIsDrawing] = useState(false);
-  const [isErasing, setIsErasing] = useState(false);
-  const [currentSize, setCurrentSize] = useState(2);
+  const canvas = canvasRef.current;
+
+  const [drawingSettings, setDrawingSettings] = useState<DrawingSettings>({
+    size: 2,
+    isErasing: false,
+  });
   const [history, setHistory] = useState<ImageData[]>([]);
+
+  // Execute canvas operation with proper context checking
+  const executeCanvasOperation = useCallback(
+    (operation: CanvasOperation): boolean => {
+      if (!canvas) return false;
+      const ctx = get2DContext(canvas);
+      if (!ctx) return false;
+
+      operation.execute(ctx);
+      return true;
+    },
+    [canvas]
+  );
 
   const handleDrawOperation = useCallback(
     (drawingData: DrawingData, isRemoteEvent = false) => {
-      const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      let x = drawingData.x;
-      let y = drawingData.y;
+      const { x: originalX, y: originalY } = drawingData;
+      let x = originalX;
+      let y = originalY;
       let lineWidth = drawingData.lineSize;
 
-      // Only normalize coordinates for remote events
       if (isRemoteEvent) {
         const normalized = normalizeCoordinates(
           x,
@@ -37,21 +55,24 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
         lineWidth = drawingData.lineSize * normalized.scale;
       }
 
-      ctx.globalCompositeOperation = drawingData.isErasing
-        ? "destination-out"
-        : "source-over";
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = lineWidth;
+      executeCanvasOperation({
+        execute: (ctx) => {
+          ctx.globalCompositeOperation = drawingData.isErasing
+            ? "destination-out"
+            : "source-over";
+          ctx.strokeStyle = "#000000";
+          ctx.lineWidth = lineWidth;
 
-      if (!drawingData.isDrawing) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
+          if (!drawingData.isDrawing) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+          }
+        },
+      });
 
-      // Emit the drawing data to other clients if this is a local event
       if (!isRemoteEvent) {
         socket?.emit("draw-line", {
           ...drawingData,
@@ -60,94 +81,88 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
         });
       }
     },
-    [canvasRef, socket]
+    [canvas, socket, executeCanvasOperation]
+  );
+
+  const handleMouseEvent = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>, isStarting = false) => {
+      if (!canvas || (!isDrawing && !isStarting)) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      handleDrawOperation({
+        x,
+        y,
+        isDrawing: !isStarting,
+        isErasing: drawingSettings.isErasing,
+        lineSize: drawingSettings.size,
+        sourceWidth: canvas.width,
+        sourceHeight: canvas.height,
+      });
+    },
+    [canvas, isDrawing, drawingSettings, handleDrawOperation]
   );
 
   const saveCanvasState = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    setHistory((prev) => [...prev, imageData]);
-  }, [canvasRef]);
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    handleDrawOperation({
-      x,
-      y,
-      isDrawing: false,
-      isErasing,
-      lineSize: currentSize, // Simplified
-      sourceWidth: canvas.width,
-      sourceHeight: canvas.height,
+    executeCanvasOperation({
+      execute: (ctx) => {
+        const canvas = canvasRef.current!;
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        setHistory((prev) => [...prev, imageData]);
+      },
     });
+  }, [canvasRef, executeCanvasOperation]);
 
-    setIsDrawing(true);
-  };
+  const startDrawing = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      handleMouseEvent(e, true);
+      setIsDrawing(true);
+    },
+    [handleMouseEvent]
+  );
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+  const draw = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      handleMouseEvent(e);
+    },
+    [handleMouseEvent]
+  );
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    handleDrawOperation({
-      x,
-      y,
-      isDrawing: true,
-      isErasing,
-      lineSize: currentSize,
-      sourceWidth: canvas.width,
-      sourceHeight: canvas.height,
-    });
-  };
-
-  const stopDrawing = () => {
+  const stopDrawing = useCallback(() => {
     if (isDrawing) {
       saveCanvasState();
     }
     setIsDrawing(false);
-  };
+  }, [isDrawing, saveCanvasState]);
 
   const updateCanvasFromHistory = useCallback(
     (history: ImageData[]) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      executeCanvasOperation({
+        execute: (ctx) => {
+          const canvas = canvasRef.current!;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (history.length > 0) {
-        const lastState = history[history.length - 1];
-        ctx.putImageData(lastState, 0, 0);
-      }
+          if (history.length > 0) {
+            const lastState = history[history.length - 1];
+            ctx.putImageData(lastState, 0, 0);
+          }
+        },
+      });
     },
-    [canvasRef]
+    [canvasRef, executeCanvasOperation]
   );
 
   const clearCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHistory([]);
-  }, [canvasRef]);
+    executeCanvasOperation({
+      execute: (ctx) => {
+        const canvas = canvasRef.current!;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setHistory([]);
+      },
+    });
+  }, [canvasRef, executeCanvasOperation]);
 
   const clear = useCallback(() => {
     clearCanvas();
@@ -165,43 +180,33 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     socket?.emit("undo-drawing", { history: base64History });
   }, [history, updateCanvasFromHistory, socket]);
 
-  const updateCanvasSize = useCallback(() => {
-    const canvas = canvasRef.current;
+  const updateCanvasSizeCallback = useCallback(() => {
     if (!canvas) return;
-
-    const parent = canvas.parentElement;
-    if (!parent) return;
-
-    const { width, height } = parent.getBoundingClientRect();
-    canvas.width = width;
-    canvas.height = height;
-
-    // Redraw the canvas content after resize
-    if (history.length > 0) {
-      updateCanvasFromHistory(history);
-    }
-  }, [canvasRef, history, updateCanvasFromHistory]);
+    updateCanvasSize(canvas);
+  }, [canvas]);
 
   useEffect(() => {
-    updateCanvasSize();
-    window.addEventListener("resize", updateCanvasSize);
+    updateCanvasSizeCallback();
+    window.addEventListener("resize", updateCanvasSizeCallback);
 
     return () => {
-      window.removeEventListener("resize", updateCanvasSize);
+      window.removeEventListener("resize", updateCanvasSizeCallback);
     };
-  }, [updateCanvasSize]);
+  }, [updateCanvasSizeCallback]);
 
   return {
-    currentSize,
+    currentSize: drawingSettings.size,
     isDrawing,
-    isErasing,
+    isErasing: drawingSettings.isErasing,
     history,
     draw,
     handleDrawOperation,
     saveCanvasState,
-    setCurrentSize,
+    setCurrentSize: (size: number) =>
+      setDrawingSettings((prev) => ({ ...prev, size })),
     setIsDrawing,
-    setIsErasing,
+    setIsErasing: (isErasing: boolean) =>
+      setDrawingSettings((prev) => ({ ...prev, isErasing })),
     setHistory,
     startDrawing,
     stopDrawing,

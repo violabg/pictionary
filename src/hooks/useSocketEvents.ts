@@ -1,6 +1,5 @@
 import { useSocket } from "@/contexts/SocketContext";
-import { DrawingData } from "@/types/drawing";
-import { GameState } from "@/types/game";
+import { DrawingData, GameState } from "@/types";
 import { base64ToImageData } from "@/utils/canvas";
 import { useEffect } from "react";
 

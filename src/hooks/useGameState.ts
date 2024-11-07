@@ -1,5 +1,5 @@
 import { useSocket } from "@/contexts/SocketContext";
-import { GameState, Player } from "@/types/game";
+import { GameState, Player } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 
 const DEFAULT_ROUND_DURATION = 120;

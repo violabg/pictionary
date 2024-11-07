@@ -4,7 +4,9 @@ type CanvasSize = {
 };
 
 // Helper function to safely get canvas context
-const get2DContext = (canvas: HTMLCanvasElement): CanvasRenderingContext2D => {
+export const get2DContext = (
+  canvas: HTMLCanvasElement
+): CanvasRenderingContext2D => {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Failed to get 2D context");
@@ -91,12 +93,7 @@ export const normalizeCoordinates = (
   };
 };
 
-export const updateCanvasSize = (
-  canvasRef: React.RefObject<HTMLCanvasElement>
-): void => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-
+export const updateCanvasSize = (canvas: HTMLCanvasElement): void => {
   const container = canvas.parentElement;
   if (!container) return;
 
