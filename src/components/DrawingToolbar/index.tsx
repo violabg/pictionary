@@ -4,7 +4,7 @@ import { Eraser, Pen, Trash, Undo } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { SizeSlider } from "./SizeSlider";
 
-type DrawingToolbarProps = {
+type Props = {
   canUndo: boolean;
   onUndo: () => void;
   onClear: () => void;
@@ -16,7 +16,7 @@ export function DrawingToolbar({
   onUndo,
   onClear,
   onToolChange,
-}: DrawingToolbarProps) {
+}: Props) {
   const [isErasing, setIsErasing] = useState(false);
   const [lineSize, setLineSize] = useState(2);
   const [eraserSize, setEraserSize] = useState(30);

@@ -1,13 +1,13 @@
 import { Slider } from "@/components/ui/slider";
 
-type SizeSliderProps = {
+type Props = {
   value: number;
   min: number;
   max: number;
   onChange: (value: number) => void;
 };
 
-export function SizeSlider({ value, min, max, onChange }: SizeSliderProps) {
+export function SizeSlider({ value, min, max, onChange }: Props) {
   return (
     <Slider
       className="w-20"

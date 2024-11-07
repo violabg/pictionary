@@ -1,32 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { GameState } from "@/types/game";
 import { Clock, Pause, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Timer } from "../Timer";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
-
-export type Player = {
-  id: string;
-  name: string;
-  score: number;
-  hasPlayed?: boolean;
-};
-
-export type GameState = {
-  players: Player[];
-  currentDrawer: Player | null;
-  nextDrawer: Player | null;
-  isGameActive: boolean;
-  isPaused: boolean;
-  playedRounds: number;
-  isGameOver: boolean;
-  timeLeft: number;
-  currentRoundDuration: number;
-  drawingEnabled?: boolean;
-};
 
 type Props = {
   gameState: GameState;

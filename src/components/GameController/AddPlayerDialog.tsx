@@ -9,17 +9,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
-interface AddPlayerDialogProps {
+type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddPlayer: (name: string) => void;
-}
+};
 
-export function AddPlayerDialog({
-  open,
-  onOpenChange,
-  onAddPlayer,
-}: AddPlayerDialogProps) {
+export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: Props) {
   const [playerName, setPlayerName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {

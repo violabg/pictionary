@@ -2,19 +2,14 @@
 
 import { useEffect } from "react";
 
-interface TimerProps {
+type Props = {
   timeLeft: number;
   setTimeLeft: (time: number) => void;
   onTimeUp: () => void;
   isActive: boolean;
-}
+};
 
-export function Timer({
-  timeLeft,
-  setTimeLeft,
-  onTimeUp,
-  isActive,
-}: TimerProps) {
+export function Timer({ timeLeft, setTimeLeft, onTimeUp, isActive }: Props) {
   useEffect(() => {
     if (!isActive) return;
 

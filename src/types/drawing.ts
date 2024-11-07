@@ -1,4 +1,4 @@
-export interface DrawingData {
+export type DrawingData = {
   x: number;
   y: number;
   isDrawing: boolean;
@@ -6,9 +6,9 @@ export interface DrawingData {
   lineSize: number;
   sourceWidth: number;
   sourceHeight: number;
-}
+};
 
-export interface DrawingTools {
+export type DrawingTools = {
   isErasing: boolean;
   size: number;
-}
+};
