@@ -2,8 +2,8 @@
 
 import { GameController } from "@/components/GameController";
 import { useCanvas } from "@/hooks/useCanvas";
+import { useChannelEvents } from "@/hooks/useChannelEvents";
 import { useGameState } from "@/hooks/useGameState";
-import { useSocketEvents } from "@/hooks/useSocketEvents";
 import { useRef } from "react";
 import Canvas from "../Canvas";
 import { DrawingToolbar } from "../DrawingToolbar";
@@ -29,7 +29,7 @@ export default function Whiteboard() {
     clearCanvas,
   } = useCanvas(canvasRef);
 
-  useSocketEvents({
+  useChannelEvents({
     canvasRef,
     clearCanvas,
     handleDrawOperation,

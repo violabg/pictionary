@@ -12,7 +12,7 @@ interface UseSocketEventsParams {
   updateCanvasFromHistory: (history: ImageData[]) => void;
 }
 
-export function useSocketEvents({
+export function useChannelEvents({
   canvasRef,
   clearCanvas,
   handleDrawOperation,
@@ -54,7 +54,6 @@ export function useSocketEvents({
     };
 
     channel.on("broadcast", { event: "draw-line" }, ({ payload }) => {
-      console.log("draw-line payload :>> ", payload);
       handleDrawLine(payload);
     });
     channel.on("broadcast", { event: "undo-drawing" }, ({ payload }) => {
