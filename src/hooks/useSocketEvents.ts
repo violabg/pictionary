@@ -8,11 +8,9 @@ interface UseSocketEventsParams {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   clearCanvas: () => void;
   handleDrawOperation: (drawingData: DrawingData, flag: boolean) => void;
-  setDrawingEnabled: (enabled: boolean) => void;
   setHistory: (history: ImageData[]) => void;
   updateCanvasFromHistory: (history: ImageData[]) => void;
   gameState: GameState;
-  shouldEnableDrawing: boolean;
   onGameStateUpdate: (state: GameState) => void;
 }
 
@@ -21,10 +19,8 @@ export function useSocketEvents({
   clearCanvas,
   handleDrawOperation,
   setHistory,
-  setDrawingEnabled,
   updateCanvasFromHistory,
   gameState,
-  shouldEnableDrawing,
   onGameStateUpdate,
 }: UseSocketEventsParams) {
   const { socket } = useSocket();
@@ -78,9 +74,7 @@ export function useSocketEvents({
     canvasRef,
     setHistory,
     updateCanvasFromHistory,
-    setDrawingEnabled,
     gameState,
-    shouldEnableDrawing,
     onGameStateUpdate,
   ]);
 

@@ -25,7 +25,6 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
   const [gameState, setGameState] = useState<GameState>(
     getInitialState(roundDuration)
   );
-  const [shouldEnableDrawing, setShouldEnableDrawing] = useState(false);
 
   const addPlayer = useCallback((name: string) => {
     const newPlayer: Player = {
@@ -68,7 +67,6 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
       isPaused: false,
       timeLeft: prev.currentRoundDuration,
     }));
-    setShouldEnableDrawing(true);
   }, [gameState.nextDrawer, gameState.players]);
 
   const calculateScore = useCallback(
@@ -99,7 +97,6 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
         if (newPlayedRounds >= totalRounds) {
           newState.isGameOver = true;
           newState.isGameActive = false;
-          setShouldEnableDrawing(false);
           return newState;
         }
 
@@ -113,7 +110,6 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
         newState.currentDrawer = null;
       }
 
-      setShouldEnableDrawing(false);
       return newState;
     });
   }, [calculateScore, selectNextDrawer]);
@@ -144,23 +140,16 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
       if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
         return prev;
       }
-      if (typeof newGameState.drawingEnabled === "boolean") {
-        setShouldEnableDrawing(newGameState.drawingEnabled);
-      }
       return newGameState;
     });
   }, []);
   // Emit game state updates when drawing enabled state changes
   useEffect(() => {
-    socket?.emit("game-state-update", {
-      ...gameState,
-      drawingEnabled: shouldEnableDrawing,
-    });
-  }, [socket, gameState, shouldEnableDrawing]);
+    socket?.emit("game-state-update", gameState);
+  }, [socket, gameState]);
 
   return {
     gameState,
-    shouldEnableDrawing,
     actions: {
       addPlayer,
       startRound,

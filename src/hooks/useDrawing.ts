@@ -9,7 +9,6 @@ export function useDrawing(canvasRef: React.RefObject<HTMLCanvasElement>) {
   const [isErasing, setIsErasing] = useState(false);
   const [currentSize, setCurrentSize] = useState(2);
   const [history, setHistory] = useState<ImageData[]>([]);
-  const [drawingEnabled, setDrawingEnabled] = useState(false);
 
   const handleDrawOperation = useCallback(
     (drawingData: DrawingData, isRemoteEvent = false) => {
@@ -74,8 +73,6 @@ export function useDrawing(canvasRef: React.RefObject<HTMLCanvasElement>) {
   }, [canvasRef]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawingEnabled) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -97,7 +94,7 @@ export function useDrawing(canvasRef: React.RefObject<HTMLCanvasElement>) {
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !drawingEnabled) return;
+    if (!isDrawing) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -126,7 +123,6 @@ export function useDrawing(canvasRef: React.RefObject<HTMLCanvasElement>) {
 
   return {
     currentSize,
-    drawingEnabled,
     isDrawing,
     isErasing,
     history,
@@ -134,7 +130,6 @@ export function useDrawing(canvasRef: React.RefObject<HTMLCanvasElement>) {
     handleDrawOperation,
     saveCanvasState,
     setCurrentSize,
-    setDrawingEnabled,
     setIsDrawing,
     setIsErasing,
     setHistory,

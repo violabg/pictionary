@@ -14,21 +14,15 @@ export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { socket } = useSocket();
 
-  const {
-    gameState,
-    shouldEnableDrawing,
-    actions: gameActions,
-  } = useGameState();
+  const { gameState, actions: gameActions } = useGameState();
 
   const {
     currentSize,
-    drawingEnabled,
     isErasing,
     history,
     draw,
     handleDrawOperation,
     setCurrentSize,
-    setDrawingEnabled,
     setIsErasing,
     setHistory,
     startDrawing,
@@ -109,16 +103,10 @@ export default function Whiteboard() {
     clearCanvas,
     updateCanvasFromHistory,
     setHistory,
-    setDrawingEnabled,
     canvasRef,
     gameState,
-    shouldEnableDrawing,
     onGameStateUpdate: gameActions.updateGameState,
   });
-
-  useEffect(() => {
-    setDrawingEnabled(shouldEnableDrawing);
-  }, [shouldEnableDrawing, setDrawingEnabled]);
 
   return (
     <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
@@ -148,7 +136,7 @@ export default function Whiteboard() {
       <Canvas
         canvasRef={canvasRef}
         isErasing={isErasing}
-        drawingEnabled={drawingEnabled}
+        drawingEnabled={gameState.isGameActive && !gameState.isPaused}
         currentSize={currentSize}
         onDraw={draw}
         onStartDrawing={startDrawing}
