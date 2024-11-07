@@ -2,7 +2,7 @@
 
 import { GameController } from "@/components/GameController";
 import { useSocket } from "@/contexts/SocketContext";
-import { useCanvas } from "@/hooks/useDrawing";
+import { useCanvas } from "@/hooks/useCanvas";
 import { useGameState } from "@/hooks/useGameState";
 import { useSocketEvents } from "@/hooks/useSocketEvents";
 import { imageDataToBase64, updateCanvasSize } from "@/utils/canvas";
