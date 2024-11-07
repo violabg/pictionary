@@ -1,10 +1,23 @@
 import { useSocket } from "@/contexts/SocketContext";
 import { GameState, Player } from "@/types";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 
+// Constants
 const DEFAULT_ROUND_DURATION = 120;
 const POINTS_MULTIPLIER = 20;
+const MIN_PLAYERS = 2;
 
+// Action Types
+type GameAction =
+  | { type: "ADD_PLAYER"; payload: string }
+  | { type: "START_ROUND" }
+  | { type: "TIME_UP"; payload: number }
+  | { type: "SET_TIMER"; payload: number }
+  | { type: "SET_TIME_LEFT"; payload: number }
+  | { type: "NEW_GAME" }
+  | { type: "UPDATE_GAME_STATE"; payload: GameState };
+
+// Initial State
 const getInitialState = (roundDuration: number): GameState => ({
   players: [
     { id: "1", name: "Player 1", score: 0, hasPlayed: false },
@@ -17,149 +30,147 @@ const getInitialState = (roundDuration: number): GameState => ({
   playedRounds: 0,
   isGameOver: false,
   currentRoundDuration: roundDuration,
+  timeLeft: roundDuration,
 });
+
+// Helper Functions
+const selectNextDrawer = (players: Player[], currentDrawerId?: string) => {
+  const availablePlayers = players.filter(
+    (p) => !p.hasPlayed && p.id !== currentDrawerId
+  );
+  return availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
+};
+
+const calculateScore = (timeLeft: number, roundDuration: number) =>
+  Math.round((timeLeft / roundDuration) * POINTS_MULTIPLIER);
+
+// Reducer
+const gameReducer = (state: GameState, action: GameAction): GameState => {
+  switch (action.type) {
+    case "ADD_PLAYER":
+      const newPlayer: Player = {
+        id: Date.now().toString(),
+        name: action.payload,
+        score: 0,
+        hasPlayed: false,
+      };
+      return { ...state, players: [...state.players, newPlayer] };
+
+    case "START_ROUND":
+      if (state.players.length < MIN_PLAYERS) {
+        alert(`Need at least ${MIN_PLAYERS} players to start!`);
+        return state;
+      }
+      const drawer = state.nextDrawer || state.players[0];
+      return {
+        ...state,
+        currentDrawer: drawer,
+        nextDrawer: null,
+        isGameActive: true,
+        isPaused: false,
+        timeLeft: state.currentRoundDuration,
+      };
+
+    case "TIME_UP": {
+      const newState = { ...state };
+      if (state.currentDrawer) {
+        const points = calculateScore(
+          action.payload,
+          state.currentRoundDuration
+        );
+        newState.players = state.players.map((player) =>
+          player.id === state.currentDrawer?.id
+            ? { ...player, score: player.score + points, hasPlayed: true }
+            : player
+        );
+      }
+
+      if (state.players.length >= MIN_PLAYERS) {
+        const newPlayedRounds = state.playedRounds + 1;
+        const totalRounds = state.players.length;
+
+        if (newPlayedRounds >= totalRounds) {
+          return {
+            ...newState,
+            isGameOver: true,
+            isGameActive: false,
+          };
+        }
+
+        const next = selectNextDrawer(state.players, state.currentDrawer?.id);
+        return {
+          ...newState,
+          playedRounds: newPlayedRounds,
+          nextDrawer: next,
+          isPaused: true,
+        };
+      }
+
+      return {
+        ...newState,
+        isGameActive: false,
+        currentDrawer: null,
+      };
+    }
+
+    case "SET_TIMER":
+      return { ...state, currentRoundDuration: action.payload };
+
+    case "SET_TIME_LEFT":
+      return { ...state, timeLeft: action.payload };
+
+    case "NEW_GAME":
+      return {
+        ...getInitialState(state.currentRoundDuration),
+        players: state.players.map((p) => ({
+          ...p,
+          score: 0,
+          hasPlayed: false,
+        })),
+      };
+
+    case "UPDATE_GAME_STATE":
+      return JSON.stringify(state) === JSON.stringify(action.payload)
+        ? state
+        : action.payload;
+
+    default:
+      return state;
+  }
+};
 
 export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
   const { socket } = useSocket();
-  const [gameState, setGameState] = useState<GameState>(
+  const [gameState, dispatch] = useReducer(
+    gameReducer,
     getInitialState(roundDuration)
   );
 
-  const addPlayer = useCallback((name: string) => {
-    const newPlayer: Player = {
-      id: Date.now().toString(),
-      name,
-      score: 0,
-      hasPlayed: false,
-    };
-    setGameState((prev) => ({
-      ...prev,
-      players: [...prev.players, newPlayer],
-    }));
-  }, []);
+  // Action creators - simplified without useCallback
+  const actions = {
+    addPlayer: (name: string) =>
+      dispatch({ type: "ADD_PLAYER", payload: name }),
 
-  const selectNextDrawer = useCallback(
-    (currentDrawerId?: string) => {
-      const availablePlayers = gameState.players.filter(
-        (p) => !p.hasPlayed && p.id !== currentDrawerId
-      );
-      return availablePlayers[
-        Math.floor(Math.random() * availablePlayers.length)
-      ];
-    },
-    [gameState.players]
-  );
+    startRound: () => dispatch({ type: "START_ROUND" }),
 
-  const startRound = useCallback(() => {
-    if (gameState.players.length < 2) {
-      alert("Need at least 2 players to start!");
-      return;
-    }
+    handleTimeUp: (timeLeft: number) =>
+      dispatch({ type: "TIME_UP", payload: timeLeft }),
 
-    const drawer = gameState.nextDrawer || gameState.players[0];
+    setTimeLeft: (seconds: number) =>
+      dispatch({ type: "SET_TIME_LEFT", payload: seconds }),
 
-    setGameState((prev) => ({
-      ...prev,
-      currentDrawer: drawer,
-      nextDrawer: null,
-      isGameActive: true,
-      isPaused: false,
-      timeLeft: prev.currentRoundDuration,
-    }));
-  }, [gameState.nextDrawer, gameState.players]);
+    setTimer: (seconds: number) =>
+      dispatch({ type: "SET_TIMER", payload: seconds }),
 
-  const calculateScore = useCallback(
-    (timeLeft: number) => {
-      return Math.round(
-        (timeLeft / gameState.currentRoundDuration) * POINTS_MULTIPLIER
-      );
-    },
-    [gameState.currentRoundDuration]
-  );
+    newGame: () => dispatch({ type: "NEW_GAME" }),
 
-  const handleTimeUp = useCallback(
-    (timeLeft: number) => {
-      setGameState((prev) => {
-        const newState = { ...prev };
-        if (prev.currentDrawer) {
-          const points = calculateScore(timeLeft);
-          newState.players = prev.players.map((player) =>
-            player.id === prev.currentDrawer?.id
-              ? { ...player, score: player.score + points, hasPlayed: true }
-              : player
-          );
-        }
+    updateGameState: (newGameState: GameState) =>
+      dispatch({ type: "UPDATE_GAME_STATE", payload: newGameState }),
+  };
 
-        if (prev.players.length >= 2) {
-          const newPlayedRounds = prev.playedRounds + 1;
-          const totalRounds = prev.players.length;
-
-          if (newPlayedRounds >= totalRounds) {
-            newState.isGameOver = true;
-            newState.isGameActive = false;
-            return newState;
-          }
-
-          // Select next drawer specifically excluding current drawer
-          const next = selectNextDrawer(prev.currentDrawer?.id);
-          newState.playedRounds = newPlayedRounds;
-          newState.nextDrawer = next;
-          newState.isPaused = true;
-        } else {
-          newState.isGameActive = false;
-          newState.currentDrawer = null;
-        }
-
-        return newState;
-      });
-    },
-    [calculateScore, selectNextDrawer]
-  );
-
-  const setTimer = useCallback((seconds: number) => {
-    setGameState((prev) => ({
-      ...prev,
-      currentRoundDuration: seconds,
-    }));
-  }, []);
-
-  const setTimeLeft = useCallback((seconds: number) => {
-    setGameState((prev) => ({
-      ...prev,
-      timeLeft: seconds,
-    }));
-  }, []);
-
-  const newGame = useCallback(() => {
-    setGameState((prev) => ({
-      ...getInitialState(prev.currentRoundDuration),
-      players: prev.players.map((p) => ({ ...p, score: 0, hasPlayed: false })),
-    }));
-  }, []);
-
-  const updateGameState = useCallback((newGameState: GameState) => {
-    setGameState((prev) => {
-      if (JSON.stringify(prev) === JSON.stringify(newGameState)) {
-        return prev;
-      }
-      return newGameState;
-    });
-  }, []);
-  // Emit game state updates when drawing enabled state changes
   useEffect(() => {
     socket?.emit("game-state-update", gameState);
   }, [socket, gameState]);
 
-  return {
-    gameState,
-    actions: {
-      addPlayer,
-      startRound,
-      handleTimeUp,
-      setTimeLeft,
-      setTimer,
-      newGame,
-      updateGameState,
-    },
-  };
+  return { gameState, actions };
 }

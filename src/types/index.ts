@@ -38,4 +38,5 @@ export type GameState = {
   playedRounds: number;
   isGameOver: boolean;
   currentRoundDuration: number;
+  timeLeft: number;
 };

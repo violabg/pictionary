@@ -41,7 +41,7 @@ export function GameController({
     window.addEventListener("keypress", handleKeyPress);
     return () => window.removeEventListener("keypress", handleKeyPress);
   }, [gameState.isGameActive]);
-
+  console.log("object");
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
       {!gameState.isGameActive && (
@@ -80,11 +80,6 @@ export function GameController({
           ) : (
             gameState.isPaused && (
               <div className="space-y-2">
-                <div className="bg-white/90 p-2 rounded-lg text-center">
-                  <p>
-                    Next player: <strong>{gameState.nextDrawer?.name}</strong>
-                  </p>
-                </div>
                 <Button
                   className="w-full"
                   size="sm"
@@ -94,6 +89,11 @@ export function GameController({
                   <Play />
                   {"I'm Ready"}
                 </Button>
+                <div className="bg-white/90 p-2 rounded-lg text-center">
+                  <p>
+                    Next player: <strong>{gameState.nextDrawer?.name}</strong>
+                  </p>
+                </div>
               </div>
             )
           )}
