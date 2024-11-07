@@ -3,7 +3,7 @@ import { DrawingData } from "@/types/drawing";
 import { normalizeCoordinates } from "@/utils/canvas";
 import { useCallback, useState } from "react";
 
-export function useDrawing(canvasRef: React.RefObject<HTMLCanvasElement>) {
+export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   const { socket } = useSocket();
   const [isDrawing, setIsDrawing] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
