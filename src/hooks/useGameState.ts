@@ -16,7 +16,6 @@ const getInitialState = (roundDuration: number): GameState => ({
   isPaused: false,
   playedRounds: 0,
   isGameOver: false,
-  timeLeft: roundDuration,
   currentRoundDuration: roundDuration,
 });
 
@@ -78,41 +77,44 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
     [gameState.currentRoundDuration]
   );
 
-  const handleTimeUp = useCallback(() => {
-    setGameState((prev) => {
-      const newState = { ...prev };
-      if (prev.currentDrawer) {
-        const points = calculateScore(prev.timeLeft);
-        newState.players = prev.players.map((player) =>
-          player.id === prev.currentDrawer?.id
-            ? { ...player, score: player.score + points, hasPlayed: true }
-            : player
-        );
-      }
-
-      if (prev.players.length >= 2) {
-        const newPlayedRounds = prev.playedRounds + 1;
-        const totalRounds = prev.players.length;
-
-        if (newPlayedRounds >= totalRounds) {
-          newState.isGameOver = true;
-          newState.isGameActive = false;
-          return newState;
+  const handleTimeUp = useCallback(
+    (timeLeft: number) => {
+      setGameState((prev) => {
+        const newState = { ...prev };
+        if (prev.currentDrawer) {
+          const points = calculateScore(timeLeft);
+          newState.players = prev.players.map((player) =>
+            player.id === prev.currentDrawer?.id
+              ? { ...player, score: player.score + points, hasPlayed: true }
+              : player
+          );
         }
 
-        // Select next drawer specifically excluding current drawer
-        const next = selectNextDrawer(prev.currentDrawer?.id);
-        newState.playedRounds = newPlayedRounds;
-        newState.nextDrawer = next;
-        newState.isPaused = true;
-      } else {
-        newState.isGameActive = false;
-        newState.currentDrawer = null;
-      }
+        if (prev.players.length >= 2) {
+          const newPlayedRounds = prev.playedRounds + 1;
+          const totalRounds = prev.players.length;
 
-      return newState;
-    });
-  }, [calculateScore, selectNextDrawer]);
+          if (newPlayedRounds >= totalRounds) {
+            newState.isGameOver = true;
+            newState.isGameActive = false;
+            return newState;
+          }
+
+          // Select next drawer specifically excluding current drawer
+          const next = selectNextDrawer(prev.currentDrawer?.id);
+          newState.playedRounds = newPlayedRounds;
+          newState.nextDrawer = next;
+          newState.isPaused = true;
+        } else {
+          newState.isGameActive = false;
+          newState.currentDrawer = null;
+        }
+
+        return newState;
+      });
+    },
+    [calculateScore, selectNextDrawer]
+  );
 
   const setTimer = useCallback((seconds: number) => {
     setGameState((prev) => ({

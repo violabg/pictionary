@@ -2,20 +2,19 @@
 
 import { Button } from "@/components/ui/button";
 import { GameState } from "@/types/game";
-import { Clock, Pause, Play, UserPlus } from "lucide-react";
+import { Clock, Play, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Timer } from "../Timer";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
+import TimerWithButton from "./TimerWithButton";
 
 type Props = {
   gameState: GameState;
   onStartRound: () => void;
-  onTimeUp: () => void;
+  onTimeUp: (timeLeft: number) => void;
   onNewGame: () => void;
   onAddPlayer: (name: string) => void;
-  onSetTimeLeft: (seconds: number) => void;
   onSetTimer: (seconds: number) => void;
 };
 
@@ -25,7 +24,6 @@ export function GameController({
   onTimeUp,
   onNewGame,
   onAddPlayer,
-  onSetTimeLeft,
   onSetTimer,
 }: Props) {
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
@@ -64,6 +62,11 @@ export function GameController({
         />
       ) : (
         <>
+          {gameState.isGameActive && (
+            <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
+              Round {gameState.playedRounds + 1} of {gameState.players.length}
+            </div>
+          )}
           {!gameState.isGameActive ? (
             <Button
               disabled={gameState.players.length < 2}
@@ -74,43 +77,28 @@ export function GameController({
               <Play />
               Start Game
             </Button>
-          ) : gameState.isPaused ? (
-            <div className="space-y-2">
-              <div className="bg-white/90 p-2 rounded-lg text-center">
-                <p>
-                  Next player: <strong>{gameState.nextDrawer?.name}</strong>
-                </p>
-              </div>
-              <Button
-                className="w-full"
-                size="sm"
-                variant={"secondary"}
-                onClick={onStartRound}
-              >
-                <Play />
-                {"I'm Ready"}
-              </Button>
-            </div>
           ) : (
-            <Button onClick={onTimeUp} size="sm" variant="destructive">
-              <Pause />
-              End Round
-            </Button>
-          )}
-          {gameState.isGameActive && (
-            <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
-              Round {gameState.playedRounds + 1} of {gameState.players.length}
-            </div>
+            gameState.isPaused && (
+              <div className="space-y-2">
+                <div className="bg-white/90 p-2 rounded-lg text-center">
+                  <p>
+                    Next player: <strong>{gameState.nextDrawer?.name}</strong>
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  size="sm"
+                  variant={"secondary"}
+                  onClick={onStartRound}
+                >
+                  <Play />
+                  {"I'm Ready"}
+                </Button>
+              </div>
+            )
           )}
           {gameState.isGameActive && !gameState.isPaused && (
-            <div className="bg-white/90 p-4 rounded-lg">
-              <Timer
-                timeLeft={gameState.timeLeft}
-                setTimeLeft={onSetTimeLeft}
-                onTimeUp={onTimeUp}
-                isActive={gameState.isGameActive && !gameState.isPaused}
-              />
-            </div>
+            <TimerWithButton gameState={gameState} onTimeUp={onTimeUp} />
           )}
           <div className="space-y-2 bg-white/90 p-4 rounded-lg">
             {gameState.players.map((player) => (

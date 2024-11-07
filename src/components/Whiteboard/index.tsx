@@ -129,7 +129,6 @@ export default function Whiteboard() {
             clear();
           }}
           onAddPlayer={gameActions.addPlayer}
-          onSetTimeLeft={gameActions.setTimeLeft}
           onSetTimer={gameActions.setTimer}
         />
       </aside>

@@ -13,7 +13,5 @@ export type GameState = {
   isPaused: boolean;
   playedRounds: number;
   isGameOver: boolean;
-  timeLeft: number;
   currentRoundDuration: number;
-  drawingEnabled?: boolean;
 };
