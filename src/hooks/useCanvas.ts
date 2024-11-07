@@ -1,7 +1,7 @@
 import { useSocket } from "@/contexts/SocketContext";
 import { DrawingData } from "@/types/drawing";
-import { normalizeCoordinates } from "@/utils/canvas";
-import { useCallback, useState } from "react";
+import { imageDataToBase64, normalizeCoordinates } from "@/utils/canvas";
+import { useCallback, useEffect, useState } from "react";
 
 export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   const { socket } = useSocket();
@@ -121,6 +121,76 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     setIsDrawing(false);
   };
 
+  const updateCanvasFromHistory = useCallback(
+    (history: ImageData[]) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (history.length > 0) {
+        const lastState = history[history.length - 1];
+        ctx.putImageData(lastState, 0, 0);
+      }
+    },
+    [canvasRef]
+  );
+
+  const clearCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHistory([]);
+  }, [canvasRef]);
+
+  const clear = useCallback(() => {
+    clearCanvas();
+    socket?.emit("clear-canvas");
+  }, [clearCanvas, socket]);
+
+  const undo = useCallback(() => {
+    if (history.length === 0) return;
+
+    const newHistory = history.slice(0, -1);
+    setHistory(newHistory);
+    updateCanvasFromHistory(newHistory);
+
+    const base64History = newHistory.map(imageDataToBase64);
+    socket?.emit("undo-drawing", { history: base64History });
+  }, [history, updateCanvasFromHistory, socket]);
+
+  const updateCanvasSize = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
+    const { width, height } = parent.getBoundingClientRect();
+    canvas.width = width;
+    canvas.height = height;
+
+    // Redraw the canvas content after resize
+    if (history.length > 0) {
+      updateCanvasFromHistory(history);
+    }
+  }, [canvasRef, history, updateCanvasFromHistory]);
+
+  useEffect(() => {
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
+
+    return () => {
+      window.removeEventListener("resize", updateCanvasSize);
+    };
+  }, [updateCanvasSize]);
+
   return {
     currentSize,
     isDrawing,
@@ -135,5 +205,9 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     setHistory,
     startDrawing,
     stopDrawing,
+    clear,
+    clearCanvas,
+    undo,
+    updateCanvasFromHistory,
   };
 }
