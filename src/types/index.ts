@@ -30,6 +30,7 @@ export type Player = {
 };
 
 export type GameState = {
+  id?: string; // Supabase record id
   players: Player[];
   currentDrawer: Player | null;
   nextDrawer: Player | null;
@@ -40,3 +41,8 @@ export type GameState = {
   currentRoundDuration: number;
   timeLeft: number;
 };
+
+export interface CurrentPlayer {
+  id: string;
+  name: string;
+}

@@ -1,6 +1,7 @@
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { GameState, Player } from "@/types";
+import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useMemo, useReducer } from "react";
+import { GameState, Player } from "../types";
 
 // Constants
 const DEFAULT_ROUND_DURATION = 120;
@@ -19,10 +20,7 @@ type GameAction =
 
 // Initial State
 const getInitialState = (roundDuration: number): GameState => ({
-  players: [
-    { id: "1", name: "Player 1", score: 0, hasPlayed: false },
-    { id: "2", name: "Player 2", score: 0, hasPlayed: false },
-  ],
+  players: [],
   currentDrawer: null,
   nextDrawer: null,
   isGameActive: false,
@@ -177,6 +175,51 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
       payload: gameState,
     });
   }, [channel, gameState]);
+
+  useEffect(() => {
+    const updateGameStateInDB = async () => {
+      if (!gameState.id) {
+        const { data, error } = await supabase
+          .from("games")
+          .insert([gameState])
+          .select()
+          .single();
+
+        if (!error && data) {
+          dispatch({
+            type: "UPDATE_GAME_STATE",
+            payload: { ...gameState, id: data.id },
+          });
+        }
+      } else {
+        await supabase.from("games").update(gameState).eq("id", gameState.id);
+      }
+    };
+
+    updateGameStateInDB();
+  }, [gameState]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("drawing_room")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "games" },
+        (payload) => {
+          if (payload.new.id === gameState.id) {
+            dispatch({
+              type: "UPDATE_GAME_STATE",
+              payload: payload.new,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [gameState.id]);
 
   return { gameState, actions };
 }
