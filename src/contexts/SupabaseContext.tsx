@@ -1,6 +1,7 @@
 // src/contexts/SupabaseProvider.tsx
 "use client";
-import { createClient, RealtimeChannel } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
+import { RealtimeChannel } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 
 interface SupabaseContextType {
@@ -18,11 +19,6 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     const channel = supabase.channel("drawing_room");
 
     channel
