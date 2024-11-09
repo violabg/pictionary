@@ -1,35 +1,74 @@
+import { useSupabase } from "@/contexts/SupabaseContext";
 import { supabase } from "@/lib/supabaseClient";
-import { CurrentPlayer, GameState } from "@/types";
+import { CurrentPlayer, GameState, Player } from "@/types";
 import { useCallback, useState } from "react";
 
 export function useCurrentPlayer() {
   const [currentPlayer, setCurrentPlayer] = useState<CurrentPlayer | null>(
     null
   );
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
 
-  const checkPlayerExists = useCallback(async (name: string) => {
-    const { data } = await supabase
-      .from("players")
-      .select("name")
-      .eq("name", name)
-      .single();
+  const { channel } = useSupabase();
 
-    return !!data;
-  }, []);
+  const loadPlayers = useCallback(async () => {
+    const { data } = await supabase.from("players").select("*");
 
-  const createPlayer = useCallback(async (name: string) => {
-    const { data, error } = await supabase
-      .from("players")
-      .insert([{ name }])
-      .select()
-      .single();
-
-    if (!error && data) {
-      setCurrentPlayer({ id: data.id, name: data.name });
-      return data;
+    if (data) {
+      const players = data.map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: 0,
+        hasPlayed: false,
+      }));
+      setAllPlayers(players);
+      return players;
     }
-    return null;
+    return [];
   }, []);
+
+  const selectOrCreatePlayer = useCallback(
+    async (name: string) => {
+      // Check if player exists in current list
+      const existingPlayer = allPlayers.find(
+        (p) => p.name.toLowerCase() === name.toLowerCase()
+      );
+
+      if (existingPlayer) {
+        setCurrentPlayer({ id: existingPlayer.id, name: existingPlayer.name });
+        return existingPlayer;
+      }
+
+      // Create new player if doesn't exist
+      const { data, error } = await supabase
+        .from("players")
+        .insert([{ name }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        const newPlayer = {
+          id: data.id,
+          name: data.name,
+          score: 0,
+          hasPlayed: false,
+        };
+        setCurrentPlayer({ id: data.id, name: data.name });
+        setAllPlayers([...allPlayers, newPlayer]);
+        console.log("player-sync newPlayer :>> ", newPlayer);
+        // Broadcast new player to all clients
+        channel?.send({
+          type: "broadcast",
+          event: "player-sync",
+          payload: newPlayer,
+        });
+
+        return newPlayer;
+      }
+      return null;
+    },
+    [allPlayers, channel]
+  );
 
   const canDraw = useCallback(
     (gameState: GameState) => {
@@ -47,8 +86,9 @@ export function useCurrentPlayer() {
 
   return {
     currentPlayer,
-    checkPlayerExists,
-    createPlayer,
+    allPlayers,
+    loadPlayers,
+    selectOrCreatePlayer,
     canDraw,
     canStartRound,
   };

@@ -1,5 +1,5 @@
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { DrawingData, GameState } from "@/types";
+import { DrawingData, GameState, Player } from "@/types";
 import { base64ToImageData } from "@/utils/canvas";
 import { useEffect } from "react";
 
@@ -10,6 +10,7 @@ interface UseSocketEventsParams {
   onGameStateUpdate: (state: GameState) => void;
   setHistory: (history: ImageData[]) => void;
   updateCanvasFromHistory: (history: ImageData[]) => void;
+  onPlayerSync?: (player: Player) => void;
 }
 
 export function useChannelEvents({
@@ -19,6 +20,7 @@ export function useChannelEvents({
   onGameStateUpdate,
   setHistory,
   updateCanvasFromHistory,
+  onPlayerSync,
 }: UseSocketEventsParams) {
   const { channel } = useSupabase();
 
@@ -53,6 +55,13 @@ export function useChannelEvents({
       onGameStateUpdate(newGameState);
     };
 
+    const handlePlayerSync = ({ payload }: { payload: Player }) => {
+      console.log("handlePlayerSync :>> ", payload);
+      if (onPlayerSync) {
+        onPlayerSync(payload);
+      }
+    };
+
     channel.on("broadcast", { event: "draw-line" }, ({ payload }) => {
       handleDrawLine(payload);
     });
@@ -65,6 +74,7 @@ export function useChannelEvents({
     channel.on("broadcast", { event: "clear-canvas" }, () => {
       clearCanvas();
     });
+    channel.on("broadcast", { event: "player-sync" }, handlePlayerSync);
 
     return () => {
       channel.unsubscribe();
@@ -77,6 +87,7 @@ export function useChannelEvents({
     setHistory,
     channel,
     updateCanvasFromHistory,
+    onPlayerSync,
   ]);
 
   return channel;

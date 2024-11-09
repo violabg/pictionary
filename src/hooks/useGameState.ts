@@ -19,8 +19,11 @@ type GameAction =
   | { type: "UPDATE_GAME_STATE"; payload: GameState };
 
 // Initial State
-const getInitialState = (roundDuration: number): GameState => ({
-  players: [],
+const getInitialState = (
+  roundDuration: number,
+  players: Player[] = []
+): GameState => ({
+  players,
   currentDrawer: null,
   nextDrawer: null,
   isGameActive: false,
@@ -164,10 +167,17 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
 
       updateGameState: (newGameState: GameState) =>
         dispatch({ type: "UPDATE_GAME_STATE", payload: newGameState }),
-    }),
-    [dispatch]
-  );
 
+      syncInitialPlayers: (players: Player[]) => {
+        dispatch({
+          type: "UPDATE_GAME_STATE",
+          payload: { ...gameState, players },
+        });
+      },
+    }),
+    [dispatch, gameState]
+  );
+  console.log("gameState :>> ", gameState);
   useEffect(() => {
     channel?.send({
       type: "broadcast",

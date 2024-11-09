@@ -1,46 +1,33 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { GameState } from "@/types";
-import { Clock, Play, UserPlus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CurrentPlayer, GameState } from "@/types";
+import { Clock, Play } from "lucide-react";
+import { useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";
-import { AddPlayerDialog } from "./AddPlayerDialog";
 import { GameOver } from "./GameOver";
 import TimerWithButton from "./TimerWithButton";
 
 type Props = {
   gameState: GameState;
+  canStartRound: boolean;
+  currentPlayer: CurrentPlayer | null;
   onStartRound: () => void;
   onTimeUp: (timeLeft: number) => void;
   onNewGame: () => void;
-  onAddPlayer: (name: string) => void;
   onSetTimer: (seconds: number) => void;
 };
 
 export function GameController({
   gameState,
+  canStartRound,
+  currentPlayer,
   onStartRound,
   onTimeUp,
   onNewGame,
-  onAddPlayer,
   onSetTimer,
 }: Props) {
-  const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
-
-  // Keep only the keyboard shortcut effect
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "+" && !gameState.isGameActive) {
-        e.preventDefault();
-        setIsAddPlayerOpen(true);
-      }
-    };
-
-    window.addEventListener("keypress", handleKeyPress);
-    return () => window.removeEventListener("keypress", handleKeyPress);
-  }, [gameState.isGameActive]);
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
@@ -116,21 +103,6 @@ export function GameController({
               </div>
             ))}
           </div>
-          {!gameState.isGameActive && (
-            <Button
-              onClick={() => setIsAddPlayerOpen(true)}
-              size="sm"
-              title="Add Player (+)"
-            >
-              <UserPlus />
-              Add Player
-            </Button>
-          )}
-          <AddPlayerDialog
-            open={isAddPlayerOpen}
-            onOpenChange={setIsAddPlayerOpen}
-            onAddPlayer={onAddPlayer}
-          />
           <TimerSettings
             open={isTimerSettingsOpen}
             onOpenChange={setIsTimerSettingsOpen}

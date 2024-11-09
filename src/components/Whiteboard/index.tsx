@@ -5,7 +5,8 @@ import { useCanvas } from "@/hooks/useCanvas";
 import { useChannelEvents } from "@/hooks/useChannelEvents";
 import { useCurrentPlayer } from "@/hooks/useCurrentPlayer";
 import { useGameState } from "@/hooks/useGameState";
-import { useRef, useState } from "react";
+import { Player } from "@/types";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Canvas from "../Canvas";
 import { DrawingToolbar } from "../DrawingToolbar";
 import { AddPlayerDialog } from "../GameController/AddPlayerDialog";
@@ -13,14 +14,29 @@ import { AddPlayerDialog } from "../GameController/AddPlayerDialog";
 export default function Whiteboard() {
   const {
     currentPlayer,
-    checkPlayerExists,
-    createPlayer,
+    allPlayers,
+    loadPlayers,
+    selectOrCreatePlayer,
     canDraw,
     canStartRound,
   } = useCurrentPlayer();
-  const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   const { gameState, actions: gameActions } = useGameState();
+
+  useEffect(() => {
+    const initializePlayers = async () => {
+      const players = await loadPlayers();
+      gameActions.syncInitialPlayers(players);
+      setIsLoading(false);
+      setShowAuthDialog(!currentPlayer);
+    };
+
+    initializePlayers();
+  }, [loadPlayers, gameActions, currentPlayer]);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const {
     currentSize,
@@ -39,6 +55,16 @@ export default function Whiteboard() {
     clearCanvas,
   } = useCanvas(canvasRef);
 
+  const handlePlayerSync = useCallback(
+    (player: Player) => {
+      console.log("2handlePlayerSync :>> ", player);
+      if (!allPlayers.some((p) => p.id === player.id)) {
+        loadPlayers();
+      }
+    },
+    [allPlayers, loadPlayers]
+  );
+
   useChannelEvents({
     canvasRef,
     clearCanvas,
@@ -46,6 +72,7 @@ export default function Whiteboard() {
     onGameStateUpdate: gameActions.updateGameState,
     setHistory,
     updateCanvasFromHistory,
+    onPlayerSync: handlePlayerSync,
   });
 
   const handleToolChange = ({
@@ -60,20 +87,18 @@ export default function Whiteboard() {
   };
 
   const handleAddPlayer = async (name: string) => {
-    const exists = await checkPlayerExists(name);
-    if (exists) {
-      alert(
-        "A player with this name already exists. Please choose another name."
-      );
-      return;
-    }
-
-    const player = await createPlayer(name);
+    const player = await selectOrCreatePlayer(name);
     if (player) {
-      gameActions.addPlayer(name);
+      if (!allPlayers.some((p) => p.id === player.id)) {
+        gameActions.addPlayer(name);
+      }
       setShowAuthDialog(false);
     }
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   if (showAuthDialog) {
     return (
