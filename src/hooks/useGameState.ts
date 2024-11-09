@@ -18,6 +18,18 @@ type GameAction =
   | { type: "NEW_GAME" }
   | { type: "UPDATE_GAME_STATE"; payload: GameState };
 
+/** Types for game actions and their corresponding payloads */
+export type GameActions = {
+  addPlayer: (name: string) => void;
+  startRound: () => void;
+  handleTimeUp: (timeLeft: number) => void;
+  setTimeLeft: (seconds: number) => void;
+  setTimer: (seconds: number) => void;
+  newGame: () => void;
+  updateGameState: (newGameState: GameState) => void;
+  syncInitialPlayers: (players: Player[]) => void;
+};
+
 // Initial State
 const getInitialState = (
   roundDuration: number,
@@ -177,7 +189,7 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
     }),
     [dispatch, gameState]
   );
-  console.log("gameState :>> ", gameState);
+
   useEffect(() => {
     channel?.send({
       type: "broadcast",

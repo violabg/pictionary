@@ -1,10 +1,13 @@
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { DrawingData, GameState, Player } from "@/types";
+import { supabase } from "@/lib/supabaseClient";
+import { CurrentPlayer, DrawingData, GameState, Player } from "@/types";
 import { base64ToImageData } from "@/utils/canvas";
 import { useEffect } from "react";
+import { GameActions } from "./useGameState";
 
 interface UseSocketEventsParams {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  gameActions: GameActions;
   clearCanvas: () => void;
   handleDrawOperation: (drawingData: DrawingData, flag: boolean) => void;
   onGameStateUpdate: (state: GameState) => void;
@@ -15,6 +18,7 @@ interface UseSocketEventsParams {
 
 export function useChannelEvents({
   canvasRef,
+  gameActions,
   clearCanvas,
   handleDrawOperation,
   onGameStateUpdate,
@@ -55,13 +59,6 @@ export function useChannelEvents({
       onGameStateUpdate(newGameState);
     };
 
-    const handlePlayerSync = ({ payload }: { payload: Player }) => {
-      console.log("handlePlayerSync :>> ", payload);
-      if (onPlayerSync) {
-        onPlayerSync(payload);
-      }
-    };
-
     channel.on("broadcast", { event: "draw-line" }, ({ payload }) => {
       handleDrawLine(payload);
     });
@@ -74,7 +71,21 @@ export function useChannelEvents({
     channel.on("broadcast", { event: "clear-canvas" }, () => {
       clearCanvas();
     });
-    channel.on("broadcast", { event: "player-sync" }, handlePlayerSync);
+
+    supabase
+      .channel("custom-all-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "players" },
+        (payload) => {
+          console.log("Change received!", payload);
+          if (payload.eventType === "INSERT") {
+            const player = payload.new as CurrentPlayer;
+            gameActions.addPlayer(player.name);
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
       channel.unsubscribe();
@@ -88,6 +99,7 @@ export function useChannelEvents({
     channel,
     updateCanvasFromHistory,
     onPlayerSync,
+    gameActions,
   ]);
 
   return channel;

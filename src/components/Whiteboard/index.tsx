@@ -67,6 +67,7 @@ export default function Whiteboard() {
 
   useChannelEvents({
     canvasRef,
+    gameActions,
     clearCanvas,
     handleDrawOperation,
     onGameStateUpdate: gameActions.updateGameState,

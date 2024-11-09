@@ -1,4 +1,3 @@
-import { useSupabase } from "@/contexts/SupabaseContext";
 import { supabase } from "@/lib/supabaseClient";
 import { CurrentPlayer, GameState, Player } from "@/types";
 import { useCallback, useState } from "react";
@@ -8,8 +7,6 @@ export function useCurrentPlayer() {
     null
   );
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-
-  const { channel } = useSupabase();
 
   const loadPlayers = useCallback(async () => {
     const { data } = await supabase.from("players").select("*");
@@ -55,19 +52,12 @@ export function useCurrentPlayer() {
         };
         setCurrentPlayer({ id: data.id, name: data.name });
         setAllPlayers([...allPlayers, newPlayer]);
-        console.log("player-sync newPlayer :>> ", newPlayer);
-        // Broadcast new player to all clients
-        channel?.send({
-          type: "broadcast",
-          event: "player-sync",
-          payload: newPlayer,
-        });
 
         return newPlayer;
       }
       return null;
     },
-    [allPlayers, channel]
+    [allPlayers]
   );
 
   const canDraw = useCallback(
