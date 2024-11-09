@@ -9,19 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Clock } from "lucide-react";
 import { useState } from "react";
 
-interface TimerSettingsProps {
+type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSetTimer: (seconds: number) => void;
   currentTime: number;
-}
+};
 
 export function TimerSettings({
   open,
   onOpenChange,
   onSetTimer,
   currentTime,
-}: TimerSettingsProps) {
+}: Props) {
   const [seconds, setSeconds] = useState(currentTime);
 
   const handleSubmit = (e: React.FormEvent) => {

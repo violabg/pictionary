@@ -1,19 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Player } from "@/types";
 import { Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { Player } from "./GameController";
 
 const Confetti = dynamic(() => import("react-confetti"), { ssr: false });
 
-interface GameOverProps {
+type Props = {
   players: Player[];
   onNewGame: () => void;
-}
+};
 
-export function GameOver({ players, onNewGame }: GameOverProps) {
+export function GameOver({ players, onNewGame }: Props) {
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 0,
     height: typeof window !== "undefined" ? window.innerHeight : 0,

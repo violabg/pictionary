@@ -1,32 +1,37 @@
+// src/contexts/SupabaseProvider.tsx
 "use client";
-
-import { createClient } from "@supabase/supabase-js";
+import { createClient, RealtimeChannel } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 interface SupabaseContextType {
-  supabase: typeof supabase;
+  channel: RealtimeChannel | null;
   isConnected: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType>({
-  supabase,
+  channel: null,
   isConnected: false,
 });
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const channel = supabase.channel("system");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-    channel.subscribe((status) => {
-      setIsConnected(status === "SUBSCRIBED");
-    });
+    const channel = supabase.channel("drawing_room");
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        setIsConnected(true);
+      })
+      .subscribe();
+
+    setChannel(channel);
 
     return () => {
       channel.unsubscribe();
@@ -34,7 +39,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <SupabaseContext.Provider value={{ supabase, isConnected }}>
+    <SupabaseContext.Provider value={{ channel, isConnected }}>
       {children}
     </SupabaseContext.Provider>
   );
