@@ -1,6 +1,6 @@
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { GameState, Player } from "@/types";
 import { useEffect, useMemo, useReducer } from "react";
+import { GameState, Player } from "../types";
 
 // Constants
 const DEFAULT_ROUND_DURATION = 120;
@@ -17,12 +17,24 @@ type GameAction =
   | { type: "NEW_GAME" }
   | { type: "UPDATE_GAME_STATE"; payload: GameState };
 
+/** Types for game actions and their corresponding payloads */
+export type GameActions = {
+  addPlayer: (name: string) => void;
+  startRound: () => void;
+  handleTimeUp: (timeLeft: number) => void;
+  setTimeLeft: (seconds: number) => void;
+  setTimer: (seconds: number) => void;
+  newGame: () => void;
+  updateGameState: (newGameState: GameState) => void;
+  syncInitialPlayers: (players: Player[]) => void;
+};
+
 // Initial State
-const getInitialState = (roundDuration: number): GameState => ({
-  players: [
-    { id: "1", name: "Player 1", score: 0, hasPlayed: false },
-    { id: "2", name: "Player 2", score: 0, hasPlayed: false },
-  ],
+const getInitialState = (
+  roundDuration: number,
+  players: Player[] = []
+): GameState => ({
+  players,
   currentDrawer: null,
   nextDrawer: null,
   isGameActive: false,
@@ -166,8 +178,15 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
 
       updateGameState: (newGameState: GameState) =>
         dispatch({ type: "UPDATE_GAME_STATE", payload: newGameState }),
+
+      syncInitialPlayers: (players: Player[]) => {
+        dispatch({
+          type: "UPDATE_GAME_STATE",
+          payload: { ...gameState, players },
+        });
+      },
     }),
-    [dispatch]
+    [dispatch, gameState]
   );
 
   useEffect(() => {
