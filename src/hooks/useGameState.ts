@@ -46,7 +46,8 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
 
   const updateGameState = async (newState: GameState) => {
     setGameState(newState);
-    await supabase.from("game_states").update(newState).eq("id", gameId);
+    const { id, ...state } = newState;
+    await supabase.from("game_states").update(state).eq("room_id", gameId);
   };
 
   const startRound = () => {
@@ -170,6 +171,7 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
           filter: `room_id=eq.${gameId}`,
         },
         (payload) => {
+          console.log("payload :>> ", payload);
           const game = payload.new as GameState;
           if (
             payload.eventType === "INSERT" ||

@@ -24,8 +24,6 @@ export function GameController() {
   } = useGameState();
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
 
-  console.log("gameState :>> ", gameState);
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
