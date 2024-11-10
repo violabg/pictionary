@@ -1,42 +1,15 @@
 "use client";
 
+import { jotaiStore } from "@/atoms/store";
 import { GameController } from "@/components/GameController";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useChannelEvents } from "@/hooks/useChannelEvents";
-import { useCurrentPlayer } from "@/hooks/useCurrentPlayer";
-import { useGameState } from "@/hooks/useGameState";
-import { Player } from "@/types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Provider } from "jotai";
+import { useRef } from "react";
 import Canvas from "../Canvas";
 import { DrawingToolbar } from "../DrawingToolbar";
-import { AddPlayerDialog } from "../GameController/AddPlayerDialog";
 
 export default function Whiteboard() {
-  const {
-    currentPlayer,
-    allPlayers,
-    loadPlayers,
-    selectOrCreatePlayer,
-    canDraw,
-    canStartRound,
-  } = useCurrentPlayer();
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const { gameState, actions: gameActions } = useGameState();
-  console.log("gameState.isGameActive :>> ", gameState.isGameActive);
-  useEffect(() => {
-    const initializePlayers = async () => {
-      const players = await loadPlayers();
-      gameActions.syncInitialPlayers(players);
-      setIsLoading(false);
-      setShowAuthDialog(!currentPlayer);
-    };
-    if (!gameState.isGameActive) {
-      initializePlayers();
-    }
-  }, [loadPlayers, gameActions, currentPlayer, gameState.isGameActive]);
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const {
@@ -56,25 +29,12 @@ export default function Whiteboard() {
     clearCanvas,
   } = useCanvas(canvasRef);
 
-  const handlePlayerSync = useCallback(
-    (player: Player) => {
-      console.log("2handlePlayerSync :>> ", player);
-      if (!allPlayers.some((p) => p.id === player.id)) {
-        loadPlayers();
-      }
-    },
-    [allPlayers, loadPlayers]
-  );
-
   useChannelEvents({
     canvasRef,
-    gameActions,
     clearCanvas,
     handleDrawOperation,
-    onGameStateUpdate: gameActions.updateGameState,
     setHistory,
     updateCanvasFromHistory,
-    onPlayerSync: handlePlayerSync,
   });
 
   const handleToolChange = ({
@@ -88,65 +48,31 @@ export default function Whiteboard() {
     setCurrentSize(size);
   };
 
-  const handleAddPlayer = async (name: string) => {
-    const player = await selectOrCreatePlayer(name);
-    if (player) {
-      if (!allPlayers.some((p) => p.id === player.id)) {
-        gameActions.addPlayer(name);
-      }
-      setShowAuthDialog(false);
-    }
-  };
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (showAuthDialog) {
-    return (
-      <AddPlayerDialog
-        open={true}
-        onOpenChange={() => {}}
-        onAddPlayer={handleAddPlayer}
-      />
-    );
-  }
-
   return (
-    <div className="fixed inset-0 gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] p-4">
-      <DrawingToolbar
-        canUndo={history.length > 1}
-        onUndo={undo}
-        onClear={clear}
-        onToolChange={handleToolChange}
-      />
-
-      <aside className="self-stretch">
-        <GameController
-          gameState={gameState}
-          currentPlayer={currentPlayer}
-          canStartRound={canStartRound(gameState)}
-          onStartRound={() => {
-            gameActions.startRound();
-            clear();
-          }}
-          onTimeUp={gameActions.handleTimeUp}
-          onNewGame={() => {
-            gameActions.newGame();
-            clear();
-          }}
-          onSetTimer={gameActions.setTimer}
-        />
-      </aside>
-      <Canvas
-        canvasRef={canvasRef}
-        isErasing={isErasing}
-        drawingEnabled={gameState.isGameActive && !gameState.isPaused}
-        currentSize={currentSize}
-        onDraw={draw}
-        onStartDrawing={startDrawing}
-        onStopDrawing={stopDrawing}
-      />
-    </div>
+    <Provider store={jotaiStore}>
+      <div className="gap-2 grid grid-cols-[300px_1fr] grid-rows-[auto_1fr] [grid-template-areas:'sidebar_header'_'sidebar_content'] p-2 h-[100vh]">
+        <aside className="[grid-area:sidebar]">
+          <GameController />
+        </aside>
+        <header className="[grid-area:header] flex items-center gap-2 col-span-2 bg-black/20 p-2 rounded-md }">
+          <DrawingToolbar
+            canUndo={history.length > 1}
+            onUndo={undo}
+            onClear={clear}
+            onToolChange={handleToolChange}
+          />
+        </header>
+        <main className="relative [grid-area:content] bg-black/20 p-2 rounded-md">
+          <Canvas
+            canvasRef={canvasRef}
+            isErasing={isErasing}
+            currentSize={currentSize}
+            onDraw={draw}
+            onStartDrawing={startDrawing}
+            onStopDrawing={stopDrawing}
+          />
+        </main>
+      </div>
+    </Provider>
   );
 }

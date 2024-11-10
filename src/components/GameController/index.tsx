@@ -1,33 +1,34 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CurrentPlayer, GameState } from "@/types";
+import { useGameState } from "@/hooks/useGameState";
 import { Clock, Play } from "lucide-react";
 import { useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { GameOver } from "./GameOver";
+import PlayersList from "./PlayersList";
 import TimerWithButton from "./TimerWithButton";
 
-type Props = {
-  gameState: GameState;
-  canStartRound: boolean;
-  currentPlayer: CurrentPlayer | null;
-  onStartRound: () => void;
-  onTimeUp: (timeLeft: number) => void;
-  onNewGame: () => void;
-  onSetTimer: (seconds: number) => void;
-};
+// type Props = {
+// };
 
-export function GameController({
-  gameState,
-  canStartRound,
-  currentPlayer,
-  onStartRound,
-  onTimeUp,
-  onNewGame,
-  onSetTimer,
-}: Props) {
+export function GameController() {
+  const {
+    isLoading,
+    gameState,
+    players,
+    startRound,
+    handleTimeUp,
+    setTimer,
+    newGame,
+  } = useGameState();
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
+
+  console.log("gameState :>> ", gameState);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
@@ -44,22 +45,22 @@ export function GameController({
       )}
       {gameState.isGameOver ? (
         <GameOver
-          players={[...gameState.players].sort((a, b) => b.score - a.score)}
-          onNewGame={onNewGame}
+          players={[...players].sort((a, b) => b.score - a.score)}
+          onNewGame={newGame}
         />
       ) : (
         <>
           {gameState.isGameActive && (
             <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
-              Round {gameState.playedRounds + 1} of {gameState.players.length}
+              Round {gameState.playedRounds + 1} of {players.length}
             </div>
           )}
           {!gameState.isGameActive ? (
             <Button
-              disabled={gameState.players.length < 2}
+              disabled={players.length < 2}
               size="sm"
               variant={"secondary"}
-              onClick={onStartRound}
+              onClick={startRound}
             >
               <Play />
               Start Game
@@ -71,7 +72,7 @@ export function GameController({
                   className="w-full"
                   size="sm"
                   variant={"secondary"}
-                  onClick={onStartRound}
+                  onClick={startRound}
                 >
                   <Play />
                   {"I'm Ready"}
@@ -85,28 +86,13 @@ export function GameController({
             )
           )}
           {gameState.isGameActive && !gameState.isPaused && (
-            <TimerWithButton gameState={gameState} onTimeUp={onTimeUp} />
+            <TimerWithButton gameState={gameState} onTimeUp={handleTimeUp} />
           )}
-          <div className="space-y-2 bg-white/90 p-4 rounded-lg">
-            {gameState.players.map((player) => (
-              <div
-                key={player.id}
-                className={`flex items-center gap-2 ${
-                  gameState.currentDrawer?.id === player.id ? "font-bold" : ""
-                }`}
-              >
-                <span>{player.name}</span>
-                <span className="text-sm">({player.score} pts)</span>
-                {gameState.currentDrawer?.id === player.id && (
-                  <span className="text-blue-600 text-sm">(Drawing)</span>
-                )}
-              </div>
-            ))}
-          </div>
+          <PlayersList gameState={gameState} />
           <TimerSettings
             open={isTimerSettingsOpen}
             onOpenChange={setIsTimerSettingsOpen}
-            onSetTimer={onSetTimer}
+            onSetTimer={setTimer}
             currentTime={gameState.currentRoundDuration}
           />
         </>
