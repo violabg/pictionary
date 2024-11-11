@@ -65,7 +65,7 @@ export function useGameState() {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
-    const drawer = gameState?.nextDrawer || players[0];
+    const drawer = gameState?.nextDrawer || currentPlayer;
     const newState = {
       ...gameState,
       currentDrawer: drawer,
