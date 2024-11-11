@@ -23,11 +23,15 @@ export const gameStateAtom = atom<GameState>(
 export const isDrawerAtom = atom((get) => {
   const gameState = get(gameStateAtom);
   const currentPlayer = get(currentPlayerAtom);
-  return gameState.currentDrawer?.id === currentPlayer?.id;
+  return !currentPlayer
+    ? false
+    : gameState.currentDrawer?.id === currentPlayer?.id;
 });
 
 export const isNextDrawerAtom = atom((get) => {
   const gameState = get(gameStateAtom);
   const currentPlayer = get(currentPlayerAtom);
-  return gameState.nextDrawer?.id === currentPlayer?.id;
+  return !currentPlayer
+    ? false
+    : gameState.nextDrawer?.id === currentPlayer?.id;
 });

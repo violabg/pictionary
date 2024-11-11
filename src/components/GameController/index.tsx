@@ -1,7 +1,9 @@
 "use client";
 
+import { isDrawerAtom, isNextDrawerAtom } from "@/atoms";
 import { Button } from "@/components/ui/button";
 import { useGameState } from "@/hooks/useGameState";
+import { useAtomValue } from "jotai";
 import { Clock, Play } from "lucide-react";
 import { useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";
@@ -23,6 +25,8 @@ export function GameController() {
     newGame,
   } = useGameState();
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
+  const isDrawer = useAtomValue(isDrawerAtom);
+  const isNextDrawer = useAtomValue(isNextDrawerAtom);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -66,15 +70,17 @@ export function GameController() {
           ) : (
             gameState.isPaused && (
               <div className="space-y-2">
-                <Button
-                  className="w-full"
-                  size="sm"
-                  variant={"secondary"}
-                  onClick={startRound}
-                >
-                  <Play />
-                  {"I'm Ready"}
-                </Button>
+                {isNextDrawer && (
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    variant={"secondary"}
+                    onClick={startRound}
+                  >
+                    <Play />
+                    {"I'm Ready"}
+                  </Button>
+                )}
                 <div className="bg-white/90 p-2 rounded-lg text-center">
                   <p>
                     Next player: <strong>{gameState.nextDrawer?.name}</strong>
@@ -84,7 +90,11 @@ export function GameController() {
             )
           )}
           {gameState.isGameActive && !gameState.isPaused && (
-            <TimerWithButton gameState={gameState} onTimeUp={handleTimeUp} />
+            <TimerWithButton
+              gameState={gameState}
+              isDrawer={isDrawer}
+              onTimeUp={handleTimeUp}
+            />
           )}
           <PlayersList />
           <TimerSettings

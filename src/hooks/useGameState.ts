@@ -50,7 +50,13 @@ export function useGameState() {
 
   const updateGameState = useCallback(async (newState: GameState) => {
     // setGameState(newState);
-    const { id, ...state } = newState;
+    const { id, ...rest } = newState;
+    const state: GameStateRemote = {
+      ...rest,
+      currentDrawer: newState.currentDrawer?.id ?? null,
+      nextDrawer: newState.nextDrawer?.id ?? null,
+    };
+
     await supabase.from("game_states").update(state).eq("room_id", gameId);
   }, []);
 
@@ -73,7 +79,6 @@ export function useGameState() {
   };
 
   const handleTimeUp = async (timeLeft: number) => {
-    if (!gameState) return;
     if (gameState?.currentDrawer) {
       const points = calculateScore(timeLeft, gameState.currentRoundDuration);
       const newPlayer = getPlayerById(players, gameState.currentDrawer.id);

@@ -5,11 +5,12 @@ import { Pause } from "lucide-react";
 import { useState } from "react";
 
 type Props = {
-  onTimeUp: (time: number) => void;
   gameState: GameState;
+  isDrawer: boolean;
+  onTimeUp: (time: number) => void;
 };
 const TimerWithButton = (props: Props) => {
-  const { onTimeUp, gameState } = props;
+  const { gameState, isDrawer, onTimeUp } = props;
   const [displayTime, setDisplayTime] = useState(
     gameState.currentRoundDuration
   );
@@ -20,10 +21,12 @@ const TimerWithButton = (props: Props) => {
 
   return (
     <>
-      <Button onClick={onEndRound} size="sm" variant="destructive">
-        <Pause />
-        End Round
-      </Button>
+      {isDrawer && (
+        <Button onClick={onEndRound} size="sm" variant="destructive">
+          <Pause />
+          End Round
+        </Button>
+      )}
       <div className="bg-white/90 p-4 rounded-lg">
         <Timer
           displayTime={displayTime}
