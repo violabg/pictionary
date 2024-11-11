@@ -30,3 +30,6 @@ export const getOrCreatePlayer = async (name: string) => {
 
   return createPlayer(name);
 };
+
+export const getPlayerById = (players: Player[], id: string) =>
+  players.find((player) => player.id === id);

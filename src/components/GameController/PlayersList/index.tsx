@@ -90,7 +90,7 @@ export function PlayersList() {
               <div
                 key={player.id}
                 className={`flex items-center gap-2 ${
-                  gameState.currentDrawer === player.id ? "font-bold" : ""
+                  gameState.currentDrawer?.id === player.id ? "font-bold" : ""
                 }`}
               >
                 <span
@@ -101,7 +101,7 @@ export function PlayersList() {
                   {player.name}
                 </span>
                 <span className="text-sm">({player.score} pts)</span>
-                {gameState.currentDrawer === player.id && (
+                {gameState.currentDrawer?.id === player.id && (
                   <span className="text-blue-600 text-sm">(Drawing)</span>
                 )}
               </div>

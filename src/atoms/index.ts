@@ -19,3 +19,15 @@ export const getInitialState = (roundDuration: number): GameState => ({
 export const gameStateAtom = atom<GameState>(
   getInitialState(DEFAULT_ROUND_DURATION)
 );
+
+export const isDrawerAtom = atom((get) => {
+  const gameState = get(gameStateAtom);
+  const currentPlayer = get(currentPlayerAtom);
+  return gameState.currentDrawer?.id === currentPlayer?.id;
+});
+
+export const isNextDrawerAtom = atom((get) => {
+  const gameState = get(gameStateAtom);
+  const currentPlayer = get(currentPlayerAtom);
+  return gameState.nextDrawer?.id === currentPlayer?.id;
+});

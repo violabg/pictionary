@@ -8,7 +8,8 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
-import { GameState, Player } from "../types";
+import { GameState, GameStateRemote, Player } from "../types";
+import { getPlayerById } from "./../lib/playerService";
 
 // Constants
 
@@ -28,7 +29,7 @@ export type GameActions = {
 // Helper Functions
 const selectNextDrawer = (
   players: Player[],
-  currentDrawerId: string | null
+  currentDrawerId?: string | null
 ) => {
   const availablePlayers = players.filter(
     (p) => !p.hasPlayed && p.id !== currentDrawerId
@@ -58,7 +59,7 @@ export function useGameState() {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
-    const drawer = gameState?.nextDrawer || players[0].id;
+    const drawer = gameState?.nextDrawer || players[0];
     const newState = {
       ...gameState,
       currentDrawer: drawer,
@@ -75,9 +76,7 @@ export function useGameState() {
     if (!gameState) return;
     if (gameState?.currentDrawer) {
       const points = calculateScore(timeLeft, gameState.currentRoundDuration);
-      const newPlayer = players.find(
-        (player) => player.id === gameState.currentDrawer
-      );
+      const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
       if (newPlayer) {
         await supabase
           .from("players")
@@ -99,11 +98,11 @@ export function useGameState() {
         return;
       }
 
-      const next = selectNextDrawer(players, gameState.currentDrawer);
+      const next = selectNextDrawer(players, gameState.currentDrawer?.id);
       updateGameState({
         ...gameState,
         playedRounds: newPlayedRounds,
-        nextDrawer: next.id,
+        nextDrawer: next,
         isPaused: true,
       });
       return;
@@ -172,12 +171,23 @@ export function useGameState() {
           filter: `room_id=eq.${gameId}`,
         },
         (payload) => {
-          const game = payload.new as GameState;
+          const game = payload.new as GameStateRemote;
           if (
             payload.eventType === "INSERT" ||
             payload.eventType === "UPDATE"
           ) {
-            setGameState(game);
+            const {
+              currentDrawer: _currentDrawer,
+              nextDrawer: _nextDrawer,
+              ...rest
+            } = game;
+            const nextDrawer = getPlayerById(players, _nextDrawer ?? "");
+            const currentDrawer = getPlayerById(players, _currentDrawer ?? "");
+            setGameState({
+              ...rest,
+              currentDrawer,
+              nextDrawer,
+            });
           }
         }
       )
@@ -186,7 +196,7 @@ export function useGameState() {
     return () => {
       supabase.removeChannel(gameSubscription);
     };
-  }, [isLoading, setGameState, updateGameState]);
+  }, [isLoading, players, setGameState, updateGameState]);
 
   return {
     currentPlayer,
