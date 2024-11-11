@@ -71,18 +71,15 @@ export function useGameState() {
     return newState;
   };
 
-  const handleTimeUp = (timeLeft: number) => {
+  const handleTimeUp = async (timeLeft: number) => {
     if (!gameState) return;
-
     if (gameState?.currentDrawer) {
       const points = calculateScore(timeLeft, gameState.currentRoundDuration);
-
       const newPlayer = players.find(
         (player) => player.id === gameState.currentDrawer
       );
-
       if (newPlayer) {
-        supabase
+        await supabase
           .from("players")
           .update({ score: newPlayer.score + points, hasPlayed: true })
           .eq("id", newPlayer.id);
