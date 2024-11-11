@@ -31,8 +31,8 @@ export type Player = {
 
 export type GameState = {
   id?: string; // Supabase record id
-  currentDrawer: Player | null;
-  nextDrawer: Player | null;
+  currentDrawer: string | null;
+  nextDrawer: string | null;
   isGameActive: boolean;
   isPaused: boolean;
   playedRounds: number;

@@ -7,7 +7,7 @@ import {
 } from "@/atoms";
 import { supabase } from "@/lib/supabaseClient";
 import { useAtom, useAtomValue } from "jotai";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GameState, Player } from "../types";
 
 // Constants
@@ -26,7 +26,10 @@ export type GameActions = {
 };
 
 // Helper Functions
-const selectNextDrawer = (players: Player[], currentDrawerId?: string) => {
+const selectNextDrawer = (
+  players: Player[],
+  currentDrawerId: string | null
+) => {
   const availablePlayers = players.filter(
     (p) => !p.hasPlayed && p.id !== currentDrawerId
   );
@@ -38,24 +41,24 @@ const calculateScore = (timeLeft: number, roundDuration: number) =>
 
 const gameId = "spindox";
 
-export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
+export function useGameState() {
   const [gameState, setGameState] = useAtom(gameStateAtom);
   const players = useAtomValue(playersAtom);
   const currentPlayer = useAtomValue(currentPlayerAtom);
   const [isLoading, setIsLoading] = useState(true);
 
-  const updateGameState = async (newState: GameState) => {
-    setGameState(newState);
+  const updateGameState = useCallback(async (newState: GameState) => {
+    // setGameState(newState);
     const { id, ...state } = newState;
     await supabase.from("game_states").update(state).eq("room_id", gameId);
-  };
+  }, []);
 
   const startRound = () => {
     if (players.length < MIN_PLAYERS) {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
-    const drawer = gameState?.nextDrawer || players[0];
+    const drawer = gameState?.nextDrawer || players[0].id;
     const newState = {
       ...gameState,
       currentDrawer: drawer,
@@ -75,7 +78,7 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
       const points = calculateScore(timeLeft, gameState.currentRoundDuration);
 
       const newPlayer = players.find(
-        (player) => player.id === gameState.currentDrawer?.id
+        (player) => player.id === gameState.currentDrawer
       );
 
       if (newPlayer) {
@@ -99,11 +102,11 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
         return;
       }
 
-      const next = selectNextDrawer(players, gameState.currentDrawer?.id);
+      const next = selectNextDrawer(players, gameState.currentDrawer);
       updateGameState({
         ...gameState,
         playedRounds: newPlayedRounds,
-        nextDrawer: next,
+        nextDrawer: next.id,
         isPaused: true,
       });
       return;
@@ -149,10 +152,11 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
           .single();
 
         setGameState(newGameState);
+        setIsLoading(false);
       } else {
-        setGameState(data);
+        await updateGameState(getInitialState(DEFAULT_ROUND_DURATION));
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     if (isLoading) {
@@ -171,7 +175,6 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
           filter: `room_id=eq.${gameId}`,
         },
         (payload) => {
-          console.log("payload :>> ", payload);
           const game = payload.new as GameState;
           if (
             payload.eventType === "INSERT" ||
@@ -186,7 +189,7 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
     return () => {
       supabase.removeChannel(gameSubscription);
     };
-  }, [isLoading, setGameState]);
+  }, [isLoading, setGameState, updateGameState]);
 
   return {
     currentPlayer,

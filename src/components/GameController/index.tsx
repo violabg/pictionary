@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useGameState } from "@/hooks/useGameState";
 import { Clock, Play } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { GameOver } from "./GameOver";
 import PlayersList from "./PlayersList";
@@ -24,6 +24,10 @@ export function GameController() {
   } = useGameState();
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
 
+  const nextDrawer = useMemo(
+    () => players.find((player) => player.id === gameState.nextDrawer),
+    [players, gameState.nextDrawer]
+  );
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -77,7 +81,7 @@ export function GameController() {
                 </Button>
                 <div className="bg-white/90 p-2 rounded-lg text-center">
                   <p>
-                    Next player: <strong>{gameState.nextDrawer?.name}</strong>
+                    Next player: <strong>{nextDrawer?.name}</strong>
                   </p>
                 </div>
               </div>
@@ -86,7 +90,7 @@ export function GameController() {
           {gameState.isGameActive && !gameState.isPaused && (
             <TimerWithButton gameState={gameState} onTimeUp={handleTimeUp} />
           )}
-          <PlayersList gameState={gameState} />
+          <PlayersList />
           <TimerSettings
             open={isTimerSettingsOpen}
             onOpenChange={setIsTimerSettingsOpen}

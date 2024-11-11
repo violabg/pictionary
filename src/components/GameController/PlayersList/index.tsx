@@ -1,17 +1,18 @@
 // components/PlayersList.tsx
-import { currentPlayerAtom, playersAtom } from "@/atoms";
+import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
 import { getOrCreatePlayer } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
-import type { GameState, Player } from "@/types";
-import { useAtom } from "jotai";
+import type { Player } from "@/types";
+import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 import { AddPlayerDialog } from "../AddPlayerDialog";
 
-type Props = {
-  gameState: GameState;
-};
+// type Props = {
+//   gameState: GameState;
+// };
 
-export function PlayersList({ gameState }: Props) {
+export function PlayersList() {
+  const gameState = useAtomValue(gameStateAtom);
   const [players, setPlayers] = useAtom(playersAtom);
   const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,26 +85,28 @@ export function PlayersList({ gameState }: Props) {
         <div>Loading...</div>
       ) : (
         <>
-          {players.map((player) => (
-            <div
-              key={player.id}
-              className={`flex items-center gap-2 ${
-                gameState.currentDrawer?.id === player.id ? "font-bold" : ""
-              }`}
-            >
-              <span
-                className={`${
-                  player.id === currentPlayer?.id ? "text-primary" : ""
+          {players.map((player) => {
+            return (
+              <div
+                key={player.id}
+                className={`flex items-center gap-2 ${
+                  gameState.currentDrawer === player.id ? "font-bold" : ""
                 }`}
               >
-                {player.name}
-              </span>
-              <span className="text-sm">({player.score} pts)</span>
-              {gameState.currentDrawer?.id === player.id && (
-                <span className="text-blue-600 text-sm">(Drawing)</span>
-              )}
-            </div>
-          ))}
+                <span
+                  className={`${
+                    player.id === currentPlayer?.id ? "text-primary" : ""
+                  }`}
+                >
+                  {player.name}
+                </span>
+                <span className="text-sm">({player.score} pts)</span>
+                {gameState.currentDrawer === player.id && (
+                  <span className="text-blue-600 text-sm">(Drawing)</span>
+                )}
+              </div>
+            );
+          })}
         </>
       )}
       {showAuthDialog && (
