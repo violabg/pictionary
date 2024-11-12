@@ -59,7 +59,7 @@ export function useGameState() {
       nextDrawer: newState.nextDrawer?.id ?? null,
     };
 
-    await supabase.from("game_states").update(state).eq("room_id", gameId);
+    await supabase.from("games").update(state).eq("room_id", gameId);
   }, []);
 
   const startRound = () => {
@@ -141,7 +141,7 @@ export function useGameState() {
   useEffect(() => {
     const getGameState = async () => {
       const { data } = await supabase
-        .from("game_states")
+        .from("games")
         .select("*")
         .eq("room_id", gameId)
         .single();
@@ -150,7 +150,7 @@ export function useGameState() {
         // Create new game state if it doesn't exist
         const initialState = getInitialState(DEFAULT_ROUND_DURATION);
         const { data: newGameState } = await supabase
-          .from("game_states")
+          .from("games")
           .insert([{ room_id: gameId, ...initialState }])
           .select()
           .single();
@@ -169,13 +169,13 @@ export function useGameState() {
 
     // Real-time subscription
     const gameSubscription = supabase
-      .channel("game_states")
+      .channel("games")
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "game_states",
+          table: "games",
           filter: `room_id=eq.${gameId}`,
         },
         (payload) => {
