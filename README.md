@@ -49,37 +49,7 @@ name text not null,
 score integer default 0,
 hasPlayed boolean default false,
 );
-```
 
-### Game States Table
-
-```sql
-create table public.games (
-room_id text primary key,
-isGameActive boolean default false,
-isPaused boolean default true,
-isGameOver boolean default false,
-currentDrawer references public.players(id),
-nextDrawer uuid references public.players(id),
-playedRounds integer default 0,
-timeLeft integer,
-currentRoundDuration integer default 60
-);
-```
-
-### Drawing Table
-
-```sql
-create table public.drawings (
-room_id text primary key,
-drawing_data jsonb,
-created_at timestamptz default now()
-);
-```
-
-3. Set up the following RLS (Row Level Security) policies:
-
-```sql
 -- Enable read access for all
 create policy "Enable read access for all"
 on public.players for select
@@ -99,7 +69,29 @@ to public
 using (true);
 ```
 
+### Game States Table
+
 ```sql
+create table public.games (
+room_id text primary key,
+isGameActive boolean default false,
+isPaused boolean default true,
+isGameOver boolean default false,
+currentDrawer references public.players(id),
+nextDrawer uuid references public.players(id),
+playedRounds integer default 0,
+timeLeft integer,
+currentRoundDuration integer default 60,
+current_topic uuid references public.topics(id),
+past_topics uuid[] default array[]::uuid[];
+);
+
+-- Add foreign key constraint
+alter table public.games
+add constraint fk_current_topic
+foreign key (current_topic)
+references public.topics(id);
+
 -- Enable read access for all
 create policy "Enable read access for all"
 on public.games for select
@@ -119,7 +111,15 @@ to public
 using (true);
 ```
 
+### Drawing Table
+
 ```sql
+create table public.drawings (
+room_id text primary key,
+drawing_data jsonb,
+created_at timestamptz default now()
+);
+
 -- Enable read access for all
 create policy "Enable read access for all"
 on public.drawings for select
@@ -136,6 +136,26 @@ with check (true);
 create policy "Enable update for all"
 on public.drawings for update
 to public
+using (true);
+```
+
+### Topics Table
+
+```sql
+create table public.topics (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Add RLS policies
+alter table public.topics enable row level security;
+
+create policy "Allow anonymous read access"
+on public.topics
+for select
+to anon
 using (true);
 ```
 

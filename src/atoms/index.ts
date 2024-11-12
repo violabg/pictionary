@@ -14,6 +14,8 @@ export const getInitialState = (roundDuration: number): GameState => ({
   isGameOver: false,
   currentRoundDuration: roundDuration,
   timeLeft: roundDuration,
+  currentTopic: null,
+  pastTopics: [],
 });
 
 export const gameStateAtom = atom<GameState>(

@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
-import { GameState, GameStateRemote, Player } from "../types";
+import { GameState, GameStateRemote, Player, Topic } from "../types";
 import { getPlayerById } from "./../lib/playerService";
 
 // Constants
@@ -51,9 +51,11 @@ export function useGameState() {
   const currentPlayer = useAtomValue(currentPlayerAtom);
   const [isLoading, setIsLoading] = useState(true);
   const setClearCanvas = useSetAtom(clearCanvasAtom);
+  const [topic, setTopic] = useState<Topic>();
+  const [topics, setTopics] = useState<Topic[]>([]);
 
   const updateGameState = useCallback(async (newState: GameState) => {
-    // setGameState(newState);
+    setGameState(newState);
     const { id, ...rest } = newState;
     const state: GameStateRemote = {
       ...rest,
@@ -64,21 +66,40 @@ export function useGameState() {
     await supabase.from("games").update(state).eq("room_id", gameId);
   }, []);
 
+  const fetchTopics = useCallback(async () => {
+    const { data } = await supabase.from("topics").select("*");
+    if (data) {
+      setTopics(data);
+    }
+  }, []);
+
   const startRound = () => {
     if (players.length < MIN_PLAYERS) {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
+
+    // Select a random topic that hasn't been used yet
+    const availableTopics = topics.filter(
+      (topic) => !gameState.pastTopics.includes(topic.id)
+    );
+    const randomTopic =
+      availableTopics[Math.floor(Math.random() * availableTopics.length)];
+
     const drawer = gameState?.nextDrawer || currentPlayer;
     const newState = {
       ...gameState,
       currentDrawer: drawer,
       nextDrawer: null,
+      currentTopic: randomTopic?.id,
+      pastTopics: [...gameState.pastTopics, randomTopic?.id].filter(
+        Boolean
+      ) as string[],
       isGameActive: true,
       isPaused: false,
       timeLeft: gameState?.currentRoundDuration,
     };
-    setClearCanvas((prev) => prev + 1); // Trigger canvas clear
+    setClearCanvas((prev) => prev + 1);
     updateGameState(newState);
     return newState;
   };
@@ -218,16 +239,29 @@ export function useGameState() {
     };
   }, [isLoading, players, setGameState, updateGameState]);
 
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  useEffect(() => {
+    if (gameState.currentTopic) {
+      const topic = topics.find((topic) => topic.id === gameState.currentTopic);
+      setTopic(topic);
+    }
+  }, [gameState.currentTopic, topics]);
+
   return {
     currentPlayer,
     isLoading,
     gameState,
     players,
-    startRound,
+    topic,
+    topics,
     handleTimeUp,
+    handleWinnerSelection,
+    newGame,
     setTimeLeft,
     setTimer,
-    newGame,
-    handleWinnerSelection,
+    startRound,
   };
 }

@@ -39,6 +39,8 @@ export type GameStateRemote = {
   isGameOver: boolean;
   currentRoundDuration: number;
   timeLeft: number;
+  currentTopic: string | null;
+  pastTopics: string[];
 };
 
 export type GameState = {
@@ -51,9 +53,17 @@ export type GameState = {
   isGameOver: boolean;
   currentRoundDuration: number;
   timeLeft: number;
+  currentTopic: string | null;
+  pastTopics: string[];
 };
 
 export interface CurrentPlayer {
   id: string;
   name: string;
 }
+
+export type Topic = {
+  id: string;
+  title: string;
+  description: string;
+};

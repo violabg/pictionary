@@ -17,8 +17,9 @@ export function GameController() {
     isLoading,
     gameState,
     players,
+    topic,
     startRound,
-    handleTimeUp: originalHandleTimeUp,
+    handleTimeUp,
     setTimer,
     newGame,
     handleWinnerSelection,
@@ -28,8 +29,8 @@ export function GameController() {
   const isDrawer = useAtomValue(isDrawerAtom);
   const isNextDrawer = useAtomValue(isNextDrawerAtom);
 
-  const handleTimeUp = async (timeLeft: number) => {
-    await originalHandleTimeUp(timeLeft);
+  const onHandleTimeUp = (timeLeft: number) => {
+    handleTimeUp(timeLeft);
     setShowWinnerDialog(true);
   };
 
@@ -62,6 +63,17 @@ export function GameController() {
               Round {gameState.playedRounds + 1} of {players.length}
             </div>
           )}
+          {gameState.isGameActive &&
+            !gameState.isPaused &&
+            isDrawer &&
+            topic && (
+              <div className="bg-primary p-2 rounded-lg">
+                <p className="mb-4 font-bold text-primary-foreground text-xl">
+                  {topic.title}
+                </p>
+                <p className="text-sm">{topic.description}</p>
+              </div>
+            )}
           {!gameState.isGameActive ? (
             <Button
               disabled={players.length < 2}
@@ -98,7 +110,7 @@ export function GameController() {
             <TimerWithButton
               gameState={gameState}
               isDrawer={isDrawer}
-              onTimeUp={handleTimeUp}
+              onTimeUp={onHandleTimeUp}
             />
           )}
           <PlayersList />
@@ -108,16 +120,18 @@ export function GameController() {
             onSetTimer={setTimer}
             currentTime={gameState.currentRoundDuration}
           />
-          <WinnerDialog
-            open={showWinnerDialog}
-            players={players}
-            currentDrawer={gameState.currentDrawer}
-            onSelectWinner={async (winnerId) => {
-              await handleWinnerSelection(winnerId);
-              setShowWinnerDialog(false);
-            }}
-            onOpenChange={setShowWinnerDialog}
-          />
+          {isDrawer && (
+            <WinnerDialog
+              open={showWinnerDialog}
+              players={players}
+              currentDrawer={gameState.currentDrawer}
+              onSelectWinner={async (winnerId) => {
+                await handleWinnerSelection(winnerId);
+                setShowWinnerDialog(false);
+              }}
+              onOpenChange={setShowWinnerDialog}
+            />
+          )}
         </>
       )}
     </div>
