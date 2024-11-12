@@ -5,7 +5,7 @@ export const checkPlayerExists = async (name: string) => {
   const { data, error } = await supabase
     .from("players")
     .select("*")
-    .eq("name", name)
+    .ilike("name", name.toLowerCase())
     .single();
 
   return { player: data as Player, error };

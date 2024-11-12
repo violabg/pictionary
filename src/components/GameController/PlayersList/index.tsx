@@ -1,4 +1,3 @@
-// components/PlayersList.tsx
 import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
 import { getOrCreatePlayer } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
@@ -7,16 +6,12 @@ import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 import { AddPlayerDialog } from "../AddPlayerDialog";
 
-// type Props = {
-//   gameState: GameState;
-// };
-
 export function PlayersList() {
   const gameState = useAtomValue(gameStateAtom);
   const [players, setPlayers] = useAtom(playersAtom);
   const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAuthDialog, setShowAuthDialog] = useState(true);
+  const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
 
   useEffect(() => {
     const getPlayers = async () => {

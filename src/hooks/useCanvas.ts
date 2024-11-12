@@ -213,7 +213,6 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     if (!channel) return;
 
     const handleDrawLine = (drawingData: DrawingData) => {
-      console.log("drawingData :>> ", drawingData);
       handleDrawOperation(drawingData, true);
     };
 
@@ -238,7 +237,6 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     };
 
     channel.on("broadcast", { event: "draw-line" }, ({ payload }) => {
-      console.log("game-state-update :>> ", payload);
       handleDrawLine(payload);
     });
     channel.on("broadcast", { event: "undo-drawing" }, ({ payload }) => {
