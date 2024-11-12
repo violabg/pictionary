@@ -260,6 +260,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     updateCanvasFromHistory,
   ]);
 
+  // Clear canvas when clearCount changes
   useEffect(() => {
     clear();
   }, [clear, clearCount]);
