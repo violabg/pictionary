@@ -73,7 +73,7 @@ export function DrawingToolbar({
   }, [handleToolChange, onClear, onUndo]);
 
   return (
-    <header className="flex items-center gap-2 col-span-2 bg-black/20 p-2 rounded-md">
+    <>
       <div className="flex flex-1 items-center gap-4">
         <Button
           variant={!isErasing ? undefined : "outline"}
@@ -126,6 +126,6 @@ export function DrawingToolbar({
         <Trash />
         <span>Clear</span>
       </Button>
-    </header>
+    </>
   );
 }

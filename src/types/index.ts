@@ -29,11 +29,22 @@ export type Player = {
   hasPlayed?: boolean;
 };
 
+export type GameStateRemote = {
+  id?: string;
+  currentDrawer: string | null;
+  nextDrawer: string | null;
+  isGameActive: boolean;
+  isPaused: boolean;
+  playedRounds: number;
+  isGameOver: boolean;
+  currentRoundDuration: number;
+  timeLeft: number;
+};
+
 export type GameState = {
-  id?: string; // Supabase record id
-  players: Player[];
-  currentDrawer: Player | null;
-  nextDrawer: Player | null;
+  id?: string;
+  currentDrawer?: Player | null;
+  nextDrawer?: Player | null;
   isGameActive: boolean;
   isPaused: boolean;
   playedRounds: number;

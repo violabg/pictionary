@@ -1,53 +1,37 @@
-import { useSupabase } from "@/contexts/SupabaseContext";
+import {
+  clearCanvasAtom,
+  currentPlayerAtom,
+  DEFAULT_ROUND_DURATION,
+  gameStateAtom,
+  getInitialState,
+  playersAtom,
+} from "@/atoms";
 import { supabase } from "@/lib/supabaseClient";
-import { useEffect, useMemo, useReducer } from "react";
-import { GameState, Player } from "../types";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useCallback, useEffect, useState } from "react";
+import { GameState, GameStateRemote, Player } from "../types";
+import { getPlayerById } from "./../lib/playerService";
 
 // Constants
-const DEFAULT_ROUND_DURATION = 120;
+
 const POINTS_MULTIPLIER = 20;
 const MIN_PLAYERS = 2;
 
-// Action Types
-type GameAction =
-  | { type: "ADD_PLAYER"; payload: string }
-  | { type: "START_ROUND" }
-  | { type: "TIME_UP"; payload: number }
-  | { type: "SET_TIMER"; payload: number }
-  | { type: "SET_TIME_LEFT"; payload: number }
-  | { type: "NEW_GAME" }
-  | { type: "UPDATE_GAME_STATE"; payload: GameState };
-
 /** Types for game actions and their corresponding payloads */
 export type GameActions = {
-  addPlayer: (name: string) => void;
   startRound: () => void;
   handleTimeUp: (timeLeft: number) => void;
   setTimeLeft: (seconds: number) => void;
   setTimer: (seconds: number) => void;
   newGame: () => void;
   updateGameState: (newGameState: GameState) => void;
-  syncInitialPlayers: (players: Player[]) => void;
 };
 
-// Initial State
-const getInitialState = (
-  roundDuration: number,
-  players: Player[] = []
-): GameState => ({
-  players,
-  currentDrawer: null,
-  nextDrawer: null,
-  isGameActive: false,
-  isPaused: false,
-  playedRounds: 0,
-  isGameOver: false,
-  currentRoundDuration: roundDuration,
-  timeLeft: roundDuration,
-});
-
 // Helper Functions
-const selectNextDrawer = (players: Player[], currentDrawerId?: string) => {
+const selectNextDrawer = (
+  players: Player[],
+  currentDrawerId?: string | null
+) => {
   const availablePlayers = players.filter(
     (p) => !p.hasPlayed && p.id !== currentDrawerId
   );
@@ -57,181 +41,160 @@ const selectNextDrawer = (players: Player[], currentDrawerId?: string) => {
 const calculateScore = (timeLeft: number, roundDuration: number) =>
   Math.round((timeLeft / roundDuration) * POINTS_MULTIPLIER);
 
-// Reducer
-const gameReducer = (state: GameState, action: GameAction): GameState => {
-  switch (action.type) {
-    case "ADD_PLAYER":
-      const newPlayer: Player = {
-        id: Date.now().toString(),
-        name: action.payload,
-        score: 0,
-        hasPlayed: false,
-      };
-      return { ...state, players: [...state.players, newPlayer] };
+const gameId = "spindox";
 
-    case "START_ROUND":
-      if (state.players.length < MIN_PLAYERS) {
-        alert(`Need at least ${MIN_PLAYERS} players to start!`);
-        return state;
+export function useGameState() {
+  const [gameState, setGameState] = useAtom(gameStateAtom);
+  const players = useAtomValue(playersAtom);
+  const currentPlayer = useAtomValue(currentPlayerAtom);
+  const [isLoading, setIsLoading] = useState(true);
+  const setClearCanvas = useSetAtom(clearCanvasAtom);
+
+  const updateGameState = useCallback(async (newState: GameState) => {
+    // setGameState(newState);
+    const { id, ...rest } = newState;
+    const state: GameStateRemote = {
+      ...rest,
+      currentDrawer: newState.currentDrawer?.id ?? null,
+      nextDrawer: newState.nextDrawer?.id ?? null,
+    };
+
+    await supabase.from("game_states").update(state).eq("room_id", gameId);
+  }, []);
+
+  const startRound = () => {
+    if (players.length < MIN_PLAYERS) {
+      alert(`Need at least ${MIN_PLAYERS} players to start!`);
+      return gameState;
+    }
+    const drawer = gameState?.nextDrawer || currentPlayer;
+    const newState = {
+      ...gameState,
+      currentDrawer: drawer,
+      nextDrawer: null,
+      isGameActive: true,
+      isPaused: false,
+      timeLeft: gameState?.currentRoundDuration,
+    };
+    setClearCanvas((prev) => prev + 1); // Trigger canvas clear
+    updateGameState(newState);
+    return newState;
+  };
+
+  const handleTimeUp = async (timeLeft: number) => {
+    if (gameState?.currentDrawer) {
+      const points = calculateScore(timeLeft, gameState.currentRoundDuration);
+      const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
+      if (newPlayer) {
+        await supabase
+          .from("players")
+          .update({ score: newPlayer.score + points, hasPlayed: true })
+          .eq("id", newPlayer.id);
       }
-      const drawer = state.nextDrawer || state.players[0];
-      return {
-        ...state,
-        currentDrawer: drawer,
-        nextDrawer: null,
-        isGameActive: true,
-        isPaused: false,
-        timeLeft: state.currentRoundDuration,
-      };
-
-    case "TIME_UP": {
-      const newState = { ...state };
-      if (state.currentDrawer) {
-        const points = calculateScore(
-          action.payload,
-          state.currentRoundDuration
-        );
-        newState.players = state.players.map((player) =>
-          player.id === state.currentDrawer?.id
-            ? { ...player, score: player.score + points, hasPlayed: true }
-            : player
-        );
-      }
-
-      if (state.players.length >= MIN_PLAYERS) {
-        const newPlayedRounds = state.playedRounds + 1;
-        const totalRounds = state.players.length;
-
-        if (newPlayedRounds >= totalRounds) {
-          return {
-            ...newState,
-            isGameOver: true,
-            isGameActive: false,
-          };
-        }
-
-        const next = selectNextDrawer(state.players, state.currentDrawer?.id);
-        return {
-          ...newState,
-          playedRounds: newPlayedRounds,
-          nextDrawer: next,
-          isPaused: true,
-        };
-      }
-
-      return {
-        ...newState,
-        isGameActive: false,
-        currentDrawer: null,
-      };
     }
 
-    case "SET_TIMER":
-      return { ...state, currentRoundDuration: action.payload };
+    if (players.length >= MIN_PLAYERS) {
+      const newPlayedRounds = gameState.playedRounds + 1;
+      const totalRounds = players.length;
 
-    case "SET_TIME_LEFT":
-      return { ...state, timeLeft: action.payload };
-
-    case "NEW_GAME":
-      return {
-        ...getInitialState(state.currentRoundDuration),
-        players: state.players.map((p) => ({
-          ...p,
-          score: 0,
-          hasPlayed: false,
-        })),
-      };
-
-    case "UPDATE_GAME_STATE":
-      return JSON.stringify(state) === JSON.stringify(action.payload)
-        ? state
-        : action.payload;
-
-    default:
-      return state;
-  }
-};
-
-export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
-  const { channel } = useSupabase();
-  const [gameState, dispatch] = useReducer(
-    gameReducer,
-    getInitialState(roundDuration)
-  );
-
-  const actions = useMemo(
-    () => ({
-      addPlayer: (name: string) =>
-        dispatch({ type: "ADD_PLAYER", payload: name }),
-
-      startRound: () => dispatch({ type: "START_ROUND" }),
-
-      handleTimeUp: (timeLeft: number) =>
-        dispatch({ type: "TIME_UP", payload: timeLeft }),
-
-      setTimeLeft: (seconds: number) =>
-        dispatch({ type: "SET_TIME_LEFT", payload: seconds }),
-
-      setTimer: (seconds: number) =>
-        dispatch({ type: "SET_TIMER", payload: seconds }),
-
-      newGame: () => dispatch({ type: "NEW_GAME" }),
-
-      updateGameState: (newGameState: GameState) =>
-        dispatch({ type: "UPDATE_GAME_STATE", payload: newGameState }),
-
-      syncInitialPlayers: (players: Player[]) => {
-        dispatch({
-          type: "UPDATE_GAME_STATE",
-          payload: { ...gameState, players },
+      if (newPlayedRounds >= totalRounds) {
+        updateGameState({
+          ...gameState,
+          isGameOver: true,
+          isGameActive: false,
         });
-      },
-    }),
-    [dispatch, gameState]
-  );
+        return;
+      }
 
-  useEffect(() => {
-    channel?.send({
-      type: "broadcast",
-      event: "game-state-update",
-      payload: gameState,
+      const next = selectNextDrawer(players, gameState.currentDrawer?.id);
+      updateGameState({
+        ...gameState,
+        playedRounds: newPlayedRounds,
+        nextDrawer: next,
+        isPaused: true,
+      });
+      return;
+    }
+
+    updateGameState({
+      ...gameState,
+      isGameActive: false,
+      currentDrawer: null,
     });
-  }, [channel, gameState]);
+  };
+
+  const setTimeLeft = (seconds: number) => {
+    updateGameState({ ...gameState, timeLeft: seconds });
+  };
+
+  const setTimer = (seconds: number) => {
+    updateGameState({
+      ...gameState,
+      currentRoundDuration: seconds,
+    });
+  };
+
+  const newGame = () => {
+    updateGameState(getInitialState(gameState.currentRoundDuration));
+  };
 
   useEffect(() => {
-    const updateGameStateInDB = async () => {
-      if (!gameState.id) {
-        const { data, error } = await supabase
-          .from("games")
-          .insert([gameState])
+    const getGameState = async () => {
+      const { data } = await supabase
+        .from("game_states")
+        .select("*")
+        .eq("room_id", gameId)
+        .single();
+
+      if (!data) {
+        // Create new game state if it doesn't exist
+        const initialState = getInitialState(DEFAULT_ROUND_DURATION);
+        const { data: newGameState } = await supabase
+          .from("game_states")
+          .insert([{ room_id: gameId, ...initialState }])
           .select()
           .single();
 
-        if (!error && data) {
-          dispatch({
-            type: "UPDATE_GAME_STATE",
-            payload: { ...gameState, id: data.id },
-          });
-        }
+        setGameState(newGameState);
+        setIsLoading(false);
       } else {
-        await supabase.from("games").update(gameState).eq("id", gameState.id);
+        await updateGameState(getInitialState(DEFAULT_ROUND_DURATION));
+        setIsLoading(false);
       }
     };
 
-    updateGameStateInDB();
-  }, [gameState]);
+    if (isLoading) {
+      getGameState();
+    }
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("drawing_room")
+    // Real-time subscription
+    const gameSubscription = supabase
+      .channel("game_states")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games" },
+        {
+          event: "*",
+          schema: "public",
+          table: "game_states",
+          filter: `room_id=eq.${gameId}`,
+        },
         (payload) => {
-          if (payload.new.id === gameState.id) {
-            dispatch({
-              type: "UPDATE_GAME_STATE",
-              payload: payload.new,
+          const game = payload.new as GameStateRemote;
+          if (
+            payload.eventType === "INSERT" ||
+            payload.eventType === "UPDATE"
+          ) {
+            const {
+              currentDrawer: _currentDrawer,
+              nextDrawer: _nextDrawer,
+              ...rest
+            } = game;
+            const nextDrawer = getPlayerById(players, _nextDrawer ?? "");
+            const currentDrawer = getPlayerById(players, _currentDrawer ?? "");
+            setGameState({
+              ...rest,
+              currentDrawer,
+              nextDrawer,
             });
           }
         }
@@ -239,9 +202,19 @@ export function useGameState(roundDuration = DEFAULT_ROUND_DURATION) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(gameSubscription);
     };
-  }, [gameState.id]);
+  }, [isLoading, players, setGameState, updateGameState]);
 
-  return { gameState, actions };
+  return {
+    currentPlayer,
+    isLoading,
+    gameState,
+    players,
+    startRound,
+    handleTimeUp,
+    setTimeLeft,
+    setTimer,
+    newGame,
+  };
 }
