@@ -16,6 +16,7 @@ import { getPlayerById } from "./../lib/playerService";
 
 const POINTS_MULTIPLIER = 20;
 const MIN_PLAYERS = 2;
+const GUESS_POINTS = 5;
 
 /** Types for game actions and their corresponding payloads */
 export type GameActions = {
@@ -25,6 +26,7 @@ export type GameActions = {
   setTimer: (seconds: number) => void;
   newGame: () => void;
   updateGameState: (newGameState: GameState) => void;
+  handleWinnerSelection: (winnerId: string) => Promise<void>;
 };
 
 // Helper Functions
@@ -138,6 +140,16 @@ export function useGameState() {
     updateGameState(getInitialState(gameState.currentRoundDuration));
   };
 
+  const handleWinnerSelection = async (winnerId: string) => {
+    const winner = getPlayerById(players, winnerId);
+    if (winner) {
+      await supabase
+        .from("players")
+        .update({ score: winner.score + GUESS_POINTS })
+        .eq("id", winner.id);
+    }
+  };
+
   useEffect(() => {
     const getGameState = async () => {
       const { data } = await supabase
@@ -216,5 +228,6 @@ export function useGameState() {
     setTimeLeft,
     setTimer,
     newGame,
+    handleWinnerSelection,
   };
 }

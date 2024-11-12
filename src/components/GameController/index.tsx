@@ -10,6 +10,7 @@ import { TimerSettings } from "../Timer/TimerSettings";
 import { GameOver } from "./GameOver";
 import PlayersList from "./PlayersList";
 import TimerWithButton from "./TimerWithButton";
+import { WinnerDialog } from "./WinnerDialog";
 
 export function GameController() {
   const {
@@ -17,13 +18,20 @@ export function GameController() {
     gameState,
     players,
     startRound,
-    handleTimeUp,
+    handleTimeUp: originalHandleTimeUp,
     setTimer,
     newGame,
+    handleWinnerSelection,
   } = useGameState();
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
+  const [showWinnerDialog, setShowWinnerDialog] = useState(false);
   const isDrawer = useAtomValue(isDrawerAtom);
   const isNextDrawer = useAtomValue(isNextDrawerAtom);
+
+  const handleTimeUp = async (timeLeft: number) => {
+    await originalHandleTimeUp(timeLeft);
+    setShowWinnerDialog(true);
+  };
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -99,6 +107,16 @@ export function GameController() {
             onOpenChange={setIsTimerSettingsOpen}
             onSetTimer={setTimer}
             currentTime={gameState.currentRoundDuration}
+          />
+          <WinnerDialog
+            open={showWinnerDialog}
+            players={players}
+            currentDrawer={gameState.currentDrawer}
+            onSelectWinner={async (winnerId) => {
+              await handleWinnerSelection(winnerId);
+              setShowWinnerDialog(false);
+            }}
+            onOpenChange={setShowWinnerDialog}
           />
         </>
       )}
