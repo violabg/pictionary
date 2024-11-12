@@ -6,6 +6,7 @@ import { SizeSlider } from "./SizeSlider";
 
 type Props = {
   canUndo: boolean;
+  isDrawer: boolean;
   onUndo: () => void;
   onClear: () => void;
   onToolChange: (config: { isErasing: boolean; size: number }) => void;
@@ -13,6 +14,7 @@ type Props = {
 
 export function DrawingToolbar({
   canUndo,
+  isDrawer,
   onUndo,
   onClear,
   onToolChange,
@@ -65,12 +67,13 @@ export function DrawingToolbar({
         }
       }
     };
-
-    window.addEventListener("keydown", handleKeyDown);
+    if (isDrawer) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleToolChange, onClear, onUndo]);
+  }, [isDrawer, handleToolChange, onClear, onUndo]);
 
   return (
     <>

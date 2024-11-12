@@ -35,12 +35,20 @@ export default function Whiteboard() {
     setCurrentSize(size);
   };
 
+  const _onStartDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDrawer) startDrawing(e);
+  };
+  const _onStopDrawing = () => {
+    if (isDrawer) stopDrawing();
+  };
+
   return (
     <>
       {isDrawer && (
         <header className="[grid-area:header] flex items-center gap-2 col-span-2 bg-black/20 p-2 rounded-md }">
           <DrawingToolbar
             canUndo={history.length > 1}
+            isDrawer={isDrawer}
             onUndo={undo}
             onClear={clear}
             onToolChange={handleToolChange}
@@ -53,8 +61,8 @@ export default function Whiteboard() {
           isErasing={isErasing}
           currentSize={currentSize}
           onDraw={draw}
-          onStartDrawing={startDrawing}
-          onStopDrawing={stopDrawing}
+          onStartDrawing={_onStartDrawing}
+          onStopDrawing={_onStopDrawing}
         />
       </main>
     </>
