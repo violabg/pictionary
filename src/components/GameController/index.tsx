@@ -11,9 +11,6 @@ import { GameOver } from "./GameOver";
 import PlayersList from "./PlayersList";
 import TimerWithButton from "./TimerWithButton";
 
-// type Props = {
-// };
-
 export function GameController() {
   const {
     isLoading,
