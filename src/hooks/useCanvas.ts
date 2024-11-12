@@ -1,3 +1,4 @@
+import { clearCanvasAtom } from "@/atoms";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { CanvasOperation, DrawingData, DrawingSettings } from "@/types";
 import {
@@ -7,6 +8,7 @@ import {
   normalizeCoordinates,
   updateCanvasSize,
 } from "@/utils/canvas";
+import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
 export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
@@ -19,6 +21,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     isErasing: false,
   });
   const [history, setHistory] = useState<ImageData[]>([]);
+  const clearCount = useAtomValue(clearCanvasAtom);
 
   // Execute canvas operation with proper context checking
   const executeCanvasOperation = useCallback(
@@ -256,6 +259,10 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     channel,
     updateCanvasFromHistory,
   ]);
+
+  useEffect(() => {
+    clear();
+  }, [clear, clearCount]);
 
   return {
     currentSize: drawingSettings.size,

@@ -1,4 +1,5 @@
 import {
+  clearCanvasAtom,
   currentPlayerAtom,
   DEFAULT_ROUND_DURATION,
   gameStateAtom,
@@ -6,7 +7,7 @@ import {
   playersAtom,
 } from "@/atoms";
 import { supabase } from "@/lib/supabaseClient";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { GameState, GameStateRemote, Player } from "../types";
 import { getPlayerById } from "./../lib/playerService";
@@ -47,6 +48,7 @@ export function useGameState() {
   const players = useAtomValue(playersAtom);
   const currentPlayer = useAtomValue(currentPlayerAtom);
   const [isLoading, setIsLoading] = useState(true);
+  const setClearCanvas = useSetAtom(clearCanvasAtom);
 
   const updateGameState = useCallback(async (newState: GameState) => {
     // setGameState(newState);
@@ -74,6 +76,7 @@ export function useGameState() {
       isPaused: false,
       timeLeft: gameState?.currentRoundDuration,
     };
+    setClearCanvas((prev) => prev + 1); // Trigger canvas clear
     updateGameState(newState);
     return newState;
   };

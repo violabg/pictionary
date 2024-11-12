@@ -35,3 +35,5 @@ export const isNextDrawerAtom = atom((get) => {
     ? false
     : gameState.nextDrawer?.id === currentPlayer?.id;
 });
+
+export const clearCanvasAtom = atom<number>(0);
