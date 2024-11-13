@@ -56,18 +56,12 @@ export function GameController() {
         </>
       )}
 
-      {gameState.status === "over" && (
-        <GameOver
-          players={[...players].sort((a, b) => b.score - a.score)}
-          onNewGame={newGame}
-        />
-      )}
-
       {gameState.status !== "idle" && gameState.status !== "over" && (
         <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
           Round {gameState.playedRounds + 1} of {players.length}
         </div>
       )}
+
       {gameState.status === "waitingForWinner" && (
         <div className="bg-white/90 p-2 rounded-lg text-center">
           <p>
@@ -106,7 +100,15 @@ export function GameController() {
         />
       )}
 
-      {gameState.status !== "over" && <PlayersList />}
+      {gameState.status !== "over" ? (
+        <PlayersList />
+      ) : (
+        <GameOver
+          players={[...players].sort((a, b) => b.score - a.score)}
+          onNewGame={newGame}
+        />
+      )}
+
       <TimerSettings
         open={isTimerSettingsOpen}
         onOpenChange={setIsTimerSettingsOpen}
