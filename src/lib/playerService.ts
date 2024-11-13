@@ -33,3 +33,21 @@ export const getOrCreatePlayer = async (name: string) => {
 
 export const getPlayerById = (players: Player[], id: string) =>
   players.find((player) => player.id === id);
+
+export const updatePlayerScore = async (
+  playerId: string,
+  score: number,
+  hasPlayed: boolean
+) => {
+  await supabase
+    .from("players")
+    .update({ score, hasPlayed })
+    .eq("id", playerId);
+};
+
+export const resetPlayers = async () => {
+  await supabase
+    .from("players")
+    .update({ score: 0, hasPlayed: false })
+    .or("score.gt.0,hasPlayed.eq.true");
+};

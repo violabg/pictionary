@@ -8,20 +8,28 @@ import {
 } from "@/atoms";
 import {
   calculateScore,
+  createGameState,
+  fetchGameState,
+  fetchTopics,
   getRandomTopic,
   GUESS_POINTS,
   MIN_PLAYERS,
   selectNextDrawer,
-} from "@/lib/gameStateServices";
-import { getPlayerById } from "@/lib/playerService";
+  updateGameState,
+} from "@/lib/gameService";
+import {
+  getPlayerById,
+  resetPlayers,
+  updatePlayerScore,
+} from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
-import { GameState, GameStateRemote, GameStatus, Topic } from "@/types";
+import { GameStateRemote, GameStatus, Topic } from "@/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
 const gameId = "spindox";
 
-export function useGameState() {
+export const useGameState = () => {
   const [gameState, setGameState] = useAtom(gameStateAtom);
   const players = useAtomValue(playersAtom);
   const currentPlayer = useAtomValue(currentPlayerAtom);
@@ -30,29 +38,13 @@ export function useGameState() {
   const [topic, setTopic] = useState<Topic>();
   const [topics, setTopics] = useState<Topic[]>([]);
 
-  const updateGameState = useCallback(async (newState: GameState) => {
-    const { id, ...rest } = newState;
-    const state: GameStateRemote = {
-      ...rest,
-      currentDrawer: newState.currentDrawer?.id ?? null,
-      nextDrawer: newState.nextDrawer?.id ?? null,
-    };
-
-    await supabase.from("games").update(state).eq("room_id", gameId);
-  }, []);
-
   const startGame = async () => {
     if (players.length < MIN_PLAYERS) {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
 
-    // Reset all players
-    await supabase
-      .from("players")
-      .update({ score: 0, hasPlayed: false })
-      .or("score.gt.0,hasPlayed.eq.true");
-
+    await resetPlayers();
     const randomTopic = getRandomTopic(topics, gameState.pastTopics);
 
     const drawer = selectNextDrawer(players, gameState.currentDrawer?.id);
@@ -67,31 +59,29 @@ export function useGameState() {
       status: "showTopic" as GameStatus,
       timeLeft: gameState?.currentRoundDuration,
     };
-    updateGameState(newState);
+    await updateGameState(gameId, newState);
   };
 
   const startDrawing = () => {
-    updateGameState({
+    updateGameState(gameId, {
       ...gameState,
       status: "drawing",
     });
     setClearCanvas((prev) => prev + 1);
   };
+
   const endDrawing = async (timeLeft: number) => {
     const points = calculateScore(timeLeft, gameState.currentRoundDuration);
     if (gameState?.currentDrawer) {
       const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
       if (newPlayer) {
-        await supabase
-          .from("players")
-          .update({ score: newPlayer.score + points, hasPlayed: true })
-          .eq("id", newPlayer.id);
+        await updatePlayerScore(newPlayer.id, newPlayer.score + points, true);
       }
     }
     const next = selectNextDrawer(players, gameState.currentDrawer?.id);
     const newPlayedRounds = gameState.playedRounds + 1;
 
-    updateGameState({
+    updateGameState(gameId, {
       ...gameState,
       status: "waitingForWinner",
       nextDrawer: next,
@@ -102,16 +92,17 @@ export function useGameState() {
   const handleWinnerSelection = async (winnerId: string) => {
     const winner = getPlayerById(players, winnerId);
     if (winner) {
-      await supabase
-        .from("players")
-        .update({ score: winner.score + GUESS_POINTS })
-        .eq("id", winner.id);
+      await updatePlayerScore(
+        winner.id,
+        winner.score + GUESS_POINTS,
+        !!winner.hasPlayed
+      );
     }
 
     const totalRounds = players.length;
 
     if (gameState.playedRounds >= totalRounds) {
-      updateGameState({
+      updateGameState(gameId, {
         ...gameState,
         status: "over",
       });
@@ -120,7 +111,7 @@ export function useGameState() {
 
     const randomTopic = getRandomTopic(topics, gameState.pastTopics);
 
-    updateGameState({
+    updateGameState(gameId, {
       ...gameState,
       currentDrawer: gameState.nextDrawer,
       currentTopic: randomTopic?.id,
@@ -132,11 +123,11 @@ export function useGameState() {
   };
 
   const setTimeLeft = (seconds: number) => {
-    updateGameState({ ...gameState, timeLeft: seconds });
+    updateGameState(gameId, { ...gameState, timeLeft: seconds });
   };
 
   const setTimer = (seconds: number) => {
-    updateGameState({
+    updateGameState(gameId, {
       ...gameState,
       currentRoundDuration: seconds,
     });
@@ -144,7 +135,7 @@ export function useGameState() {
 
   const newGame = () => {
     const initialState = getInitialState(gameState.currentRoundDuration);
-    updateGameState({
+    updateGameState(gameId, {
       ...initialState,
       status: "idle",
     });
@@ -152,25 +143,15 @@ export function useGameState() {
 
   useEffect(() => {
     const getGameState = async () => {
-      const { data } = await supabase
-        .from("games")
-        .select("*")
-        .eq("room_id", gameId)
-        .single();
+      const data = await fetchGameState(gameId);
 
       if (!data) {
-        // Create new game state if it doesn't exist
         const initialState = getInitialState(DEFAULT_ROUND_DURATION);
-        const { data: newGameState } = await supabase
-          .from("games")
-          .insert([{ room_id: gameId, ...initialState }])
-          .select()
-          .single();
-
+        const newGameState = await createGameState(gameId, initialState);
         setGameState(newGameState);
         setIsLoading(false);
       } else {
-        await updateGameState(getInitialState(DEFAULT_ROUND_DURATION));
+        await updateGameState(gameId, getInitialState(DEFAULT_ROUND_DURATION));
         setIsLoading(false);
       }
     };
@@ -216,7 +197,20 @@ export function useGameState() {
     return () => {
       supabase.removeChannel(gameSubscription);
     };
-  }, [isLoading, players, setGameState, updateGameState]);
+  }, [isLoading, players, setGameState]);
+
+  /**********
+   * fetchTopics
+   * ********/
+
+  const _fetchTopics = useCallback(async () => {
+    const data = await fetchTopics();
+    setTopics(data);
+  }, []);
+
+  useEffect(() => {
+    _fetchTopics();
+  }, [_fetchTopics]);
 
   useEffect(() => {
     if (gameState.currentTopic) {
@@ -224,21 +218,6 @@ export function useGameState() {
       setTopic(topic);
     }
   }, [gameState.currentTopic, topics]);
-
-  /**********
-   * fetchTopics
-   * ********/
-
-  const fetchTopics = useCallback(async () => {
-    const { data } = await supabase.from("topics").select("*");
-    if (data) {
-      setTopics(data);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTopics();
-  }, [fetchTopics]);
 
   return {
     currentPlayer,
@@ -255,4 +234,4 @@ export function useGameState() {
     startGame,
     startDrawing,
   };
-}
+};
