@@ -11,19 +11,32 @@ import {
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
+/**
+ * Custom hook for managing canvas drawing functionality
+ * Handles drawing operations, history, and real-time collaboration
+ * @param canvasRef - Reference to the canvas HTML element
+ */
 export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
+  // State management for drawing context and settings
   const { channel } = useSupabase();
   const [isDrawing, setIsDrawing] = useState(false);
   const canvas = canvasRef.current;
 
+  // Drawing settings state including brush size and eraser mode
   const [drawingSettings, setDrawingSettings] = useState<DrawingSettings>({
     size: 2,
     isErasing: false,
   });
+
+  // Maintain canvas state history for undo operations
   const [history, setHistory] = useState<ImageData[]>([]);
   const clearCount = useAtomValue(clearCanvasAtom);
 
-  // Execute canvas operation with proper context checking
+  /**
+   * Executes a canvas operation after checking context validity
+   * @param operation - The canvas operation to execute
+   * @returns boolean indicating if operation was successful
+   */
   const executeCanvasOperation = useCallback(
     (operation: CanvasOperation): boolean => {
       if (!canvas) return false;
@@ -36,6 +49,12 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     [canvas]
   );
 
+  /**
+   * Handles drawing operations on the canvas
+   * Supports both local and remote drawing events
+   * @param drawingData - Data about the drawing operation
+   * @param isRemoteEvent - Whether the event comes from another user
+   */
   const handleDrawOperation = useCallback(
     (drawingData: DrawingData, isRemoteEvent = false) => {
       if (!canvas) return;
@@ -92,6 +111,10 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     [canvas, channel, executeCanvasOperation]
   );
 
+  /**
+   * Processes mouse events for drawing
+   * Converts mouse coordinates to canvas coordinates and initiates drawing
+   */
   const handleMouseEvent = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>, isStarting = false) => {
       if (!canvas || (!isDrawing && !isStarting)) return;
@@ -113,6 +136,10 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     [canvas, isDrawing, drawingSettings, handleDrawOperation]
   );
 
+  /**
+   * Saves current canvas state to history
+   * Used for undo functionality
+   */
   const saveCanvasState = useCallback(() => {
     executeCanvasOperation({
       execute: (ctx) => {
@@ -123,6 +150,12 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     });
   }, [canvasRef, executeCanvasOperation]);
 
+  /**
+   * Drawing control functions
+   * startDrawing: Initiates drawing process
+   * draw: Continues drawing based on mouse movement
+   * stopDrawing: Ends drawing and saves state
+   */
   const startDrawing = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       handleMouseEvent(e, true);
@@ -145,6 +178,13 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     setIsDrawing(false);
   }, [isDrawing, saveCanvasState]);
 
+  /**
+   * Canvas state management functions
+   * updateCanvasFromHistory: Restores canvas to a previous state
+   * clearCanvas: Resets canvas to blank state
+   * clear: Broadcasts clear action to all users
+   * undo: Reverts to previous state and broadcasts change
+   */
   const updateCanvasFromHistory = useCallback(
     (history: ImageData[]) => {
       executeCanvasOperation({
@@ -195,11 +235,16 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     });
   }, [history, updateCanvasFromHistory, channel]);
 
+  /**
+   * Canvas size management
+   * Handles canvas resizing on window resize
+   */
   const updateCanvasSizeCallback = useCallback(() => {
     if (!canvas) return;
     updateCanvasSize(canvas);
   }, [canvas]);
 
+  // Effect hooks for initialization and real-time updates
   useEffect(() => {
     updateCanvasSizeCallback();
     window.addEventListener("resize", updateCanvasSizeCallback);
@@ -209,6 +254,10 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     };
   }, [updateCanvasSizeCallback]);
 
+  /**
+   * Real-time collaboration effect
+   * Sets up listeners for remote drawing events
+   */
   useEffect(() => {
     if (!channel) return;
 
@@ -264,6 +313,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     clear();
   }, [clear, clearCount]);
 
+  // Return hook interface
   return {
     currentSize: drawingSettings.size,
     isDrawing,

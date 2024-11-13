@@ -21,15 +21,27 @@ import { useCallback, useEffect, useState } from "react";
 
 const gameId = "spindox";
 
+/**
+ * Custom hook for managing the Pictionary game state
+ * Handles real-time game state updates, player management, and game flow
+ */
 export function useGameState() {
+  // State management atoms and local state
+  const [isLoading, setIsLoading] = useState(true);
   const [gameState, setGameState] = useAtom(gameStateAtom);
+
   const players = useAtomValue(playersAtom);
   const currentPlayer = useAtomValue(currentPlayerAtom);
-  const [isLoading, setIsLoading] = useState(true);
+
   const setClearCanvas = useSetAtom(clearCanvasAtom);
+
   const [topic, setTopic] = useState<Topic>();
   const [topics, setTopics] = useState<Topic[]>([]);
 
+  /**
+   * Updates the game state in the Supabase database
+   * Converts local state to remote format by handling player references
+   */
   const updateGameState = useCallback(async (newState: GameState) => {
     const { id, ...rest } = newState;
     const state: GameStateRemote = {
@@ -41,18 +53,24 @@ export function useGameState() {
     await supabase.from("games").update(state).eq("room_id", gameId);
   }, []);
 
+  /**
+   * Initiates a new game session
+   * Validates minimum players, resets scores, and selects first drawer
+   */
   const startGame = async () => {
+    // Validate minimum player requirement
     if (players.length < MIN_PLAYERS) {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
 
-    // Reset all players
+    // Reset player scores and states
     await supabase
       .from("players")
       .update({ score: 0, hasPlayed: false })
       .or("score.gt.0,hasPlayed.eq.true");
 
+    // Select random topic and initialize new round
     const randomTopic = getRandomTopic(topics, gameState.pastTopics);
 
     const drawer = selectNextDrawer(players, gameState.currentDrawer?.id);
@@ -70,6 +88,9 @@ export function useGameState() {
     updateGameState(newState);
   };
 
+  /**
+   * Transitions game state to drawing phase and clears canvas
+   */
   const startDrawing = () => {
     updateGameState({
       ...gameState,
@@ -77,7 +98,13 @@ export function useGameState() {
     });
     setClearCanvas((prev) => prev + 1);
   };
+
+  /**
+   * Handles end of drawing phase
+   * Calculates scores, updates player points, and prepares for next round
+   */
   const endDrawing = async (timeLeft: number) => {
+    // Calculate and award points to drawer
     const points = calculateScore(timeLeft, gameState.currentRoundDuration);
     if (gameState?.currentDrawer) {
       const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
@@ -99,7 +126,12 @@ export function useGameState() {
     });
   };
 
+  /**
+   * Processes winner selection and initiates next round
+   * Awards points to winner and checks if game should end
+   */
   const handleWinnerSelection = async (winnerId: string) => {
+    // Award points to the winner
     const winner = getPlayerById(players, winnerId);
     if (winner) {
       await supabase
@@ -131,6 +163,7 @@ export function useGameState() {
     });
   };
 
+  // Utility functions for time management
   const setTimeLeft = (seconds: number) => {
     updateGameState({ ...gameState, timeLeft: seconds });
   };
@@ -142,6 +175,9 @@ export function useGameState() {
     });
   };
 
+  /**
+   * Resets the game to initial state while preserving round duration
+   */
   const newGame = () => {
     const initialState = getInitialState(gameState.currentRoundDuration);
     updateGameState({
@@ -150,6 +186,10 @@ export function useGameState() {
     });
   };
 
+  /**
+   * Effect hook for initializing game state and setting up real-time subscriptions
+   * Handles initial game state creation and updates from Supabase
+   */
   useEffect(() => {
     const getGameState = async () => {
       const { data } = await supabase
@@ -175,11 +215,12 @@ export function useGameState() {
       }
     };
 
+    // Initialize game state if loading
     if (isLoading) {
       getGameState();
     }
 
-    // Real-time subscription
+    // Set up real-time subscription to game state changes
     const gameSubscription = supabase
       .channel("games")
       .on(
@@ -218,6 +259,9 @@ export function useGameState() {
     };
   }, [isLoading, players, setGameState, updateGameState]);
 
+  /**
+   * Effect hook for updating current topic when it changes
+   */
   useEffect(() => {
     if (gameState.currentTopic) {
       const topic = topics.find((topic) => topic.id === gameState.currentTopic);
@@ -225,10 +269,9 @@ export function useGameState() {
     }
   }, [gameState.currentTopic, topics]);
 
-  /**********
-   * fetchTopics
-   * ********/
-
+  /**
+   * Fetches available topics from the database
+   */
   const fetchTopics = useCallback(async () => {
     const { data } = await supabase.from("topics").select("*");
     if (data) {
@@ -236,10 +279,12 @@ export function useGameState() {
     }
   }, []);
 
+  // Initialize topics on component mount
   useEffect(() => {
     fetchTopics();
   }, [fetchTopics]);
 
+  // Return hook interface
   return {
     currentPlayer,
     isLoading,
