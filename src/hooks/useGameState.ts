@@ -35,6 +35,13 @@ const selectNextDrawer = (
   return availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
 };
 
+const getRandomTopic = (topics: Topic[], usedTopicIds: string[]): Topic => {
+  const availableTopics = topics.filter(
+    (topic) => !usedTopicIds.includes(topic.id)
+  );
+  return availableTopics[Math.floor(Math.random() * availableTopics.length)];
+};
+
 const calculateScore = (timeLeft: number, roundDuration: number) =>
   Math.round((timeLeft / roundDuration) * POINTS_MULTIPLIER);
 
@@ -72,11 +79,7 @@ export function useGameState() {
       .update({ score: 0, hasPlayed: false })
       .or("score.gt.0,hasPlayed.eq.true");
 
-    const availableTopics = topics.filter(
-      (topic) => !gameState.pastTopics.includes(topic.id)
-    );
-    const randomTopic =
-      availableTopics[Math.floor(Math.random() * availableTopics.length)];
+    const randomTopic = getRandomTopic(topics, gameState.pastTopics);
 
     const drawer = selectNextDrawer(players, gameState.currentDrawer?.id);
     const newState = {
@@ -141,9 +144,15 @@ export function useGameState() {
       return;
     }
 
+    const randomTopic = getRandomTopic(topics, gameState.pastTopics);
+
     updateGameState({
       ...gameState,
       currentDrawer: gameState.nextDrawer,
+      currentTopic: randomTopic?.id,
+      pastTopics: [...gameState.pastTopics, randomTopic?.id].filter(
+        Boolean
+      ) as string[],
       status: "showTopic",
     });
   };

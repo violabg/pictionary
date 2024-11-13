@@ -6,11 +6,9 @@ interface TopicCardProps {
 
 export function TopicCard({ topic }: TopicCardProps) {
   return (
-    <div className="bg-primary p-2 rounded-lg">
-      <p className="mb-4 font-bold text-primary-foreground text-xl">
-        {topic.title}
-      </p>
-      <p className="text-black text-sm">{topic.description}</p>
+    <div className="bg-secondary p-2 rounded-lg">
+      <p className="mb-4 font-bold text-primary text-xl">{topic.title}</p>
+      <p className="text-sm text-white">{topic.description}</p>
     </div>
   );
 }
