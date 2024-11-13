@@ -74,9 +74,7 @@ using (true);
 ```sql
 create table public.games (
 room_id text primary key,
-isGameActive boolean default false,
-isPaused boolean default true,
-isGameOver boolean default false,
+status text default 'idle',
 currentDrawer references public.players(id),
 nextDrawer uuid references public.players(id),
 playedRounds integer default 0,

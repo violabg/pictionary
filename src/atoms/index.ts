@@ -6,12 +6,10 @@ export const currentPlayerAtom = atom<Player>();
 export const DEFAULT_ROUND_DURATION = 120;
 // Initial State
 export const getInitialState = (roundDuration: number): GameState => ({
+  status: "idle",
   currentDrawer: null,
   nextDrawer: null,
-  isGameActive: false,
-  isPaused: false,
   playedRounds: 0,
-  isGameOver: false,
   currentRoundDuration: roundDuration,
   timeLeft: roundDuration,
   currentTopic: null,

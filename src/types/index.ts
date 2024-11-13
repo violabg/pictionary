@@ -29,14 +29,21 @@ export type Player = {
   hasPlayed?: boolean;
 };
 
+export type GameStatus =
+  | "idle"
+  | "active"
+  | "drawing"
+  | "waitingForWinner"
+  | "showTopic"
+  | "paused"
+  | "over";
+
 export type GameStateRemote = {
   id?: string;
   currentDrawer: string | null;
   nextDrawer: string | null;
-  isGameActive: boolean;
-  isPaused: boolean;
+  status: GameStatus;
   playedRounds: number;
-  isGameOver: boolean;
   currentRoundDuration: number;
   timeLeft: number;
   currentTopic: string | null;
@@ -47,10 +54,8 @@ export type GameState = {
   id?: string;
   currentDrawer?: Player | null;
   nextDrawer?: Player | null;
-  isGameActive: boolean;
-  isPaused: boolean;
+  status: GameStatus;
   playedRounds: number;
-  isGameOver: boolean;
   currentRoundDuration: number;
   timeLeft: number;
   currentTopic: string | null;

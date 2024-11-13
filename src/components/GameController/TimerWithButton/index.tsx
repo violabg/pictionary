@@ -31,7 +31,7 @@ const TimerWithButton = (props: Props) => {
         <Timer
           displayTime={displayTime}
           setDisplayTime={setDisplayTime}
-          isActive={gameState.isGameActive && !gameState.isPaused}
+          isActive={gameState.status === "drawing"}
           onTimeUp={onTimeUp}
         />
       </div>

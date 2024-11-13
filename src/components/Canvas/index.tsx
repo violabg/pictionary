@@ -23,7 +23,7 @@ const Canvas: React.FC<Props> = ({
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const gameState = useAtomValue(gameStateAtom);
 
-  const drawingEnabled = gameState?.isGameActive && !gameState?.isPaused;
+  const drawingEnabled = gameState?.status === "drawing";
 
   const updateCursor = (e: React.MouseEvent) => {
     if (cursorRef.current) {

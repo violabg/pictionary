@@ -16,7 +16,7 @@ interface WinnerDialogProps {
   players: Player[];
   currentDrawer?: Player | null;
   onSelectWinner: (playerId: string) => void;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
   topic?: Topic | null;
 }
 

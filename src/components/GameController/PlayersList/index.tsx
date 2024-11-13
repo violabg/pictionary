@@ -66,10 +66,6 @@ export function PlayersList() {
   }, [setPlayers]);
 
   const handleAddPlayer = async (name: string) => {
-    // if (players.some((player) => player.name === name)) {
-    //   alert(`${name} è già presente nella lista dei giocatori`);
-    //   return;
-    // }
     const { player } = await getOrCreatePlayer(name);
     setCurrentPlayer(player);
     setShowAuthDialog(false);

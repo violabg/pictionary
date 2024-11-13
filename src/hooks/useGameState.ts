@@ -9,7 +9,13 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
-import { GameState, GameStateRemote, Player, Topic } from "../types";
+import {
+  GameState,
+  GameStateRemote,
+  GameStatus,
+  Player,
+  Topic,
+} from "../types";
 import { getPlayerById } from "./../lib/playerService";
 
 // Constants
@@ -17,17 +23,6 @@ import { getPlayerById } from "./../lib/playerService";
 const POINTS_MULTIPLIER = 20;
 const MIN_PLAYERS = 2;
 const GUESS_POINTS = 5;
-
-/** Types for game actions and their corresponding payloads */
-export type GameActions = {
-  startRound: () => void;
-  handleTimeUp: (timeLeft: number) => void;
-  setTimeLeft: (seconds: number) => void;
-  setTimer: (seconds: number) => void;
-  newGame: () => void;
-  updateGameState: (newGameState: GameState) => void;
-  handleWinnerSelection: (winnerId: string) => Promise<void>;
-};
 
 // Helper Functions
 const selectNextDrawer = (
@@ -65,27 +60,25 @@ export function useGameState() {
     await supabase.from("games").update(state).eq("room_id", gameId);
   }, []);
 
-  const fetchTopics = useCallback(async () => {
-    const { data } = await supabase.from("topics").select("*");
-    if (data) {
-      setTopics(data);
-    }
-  }, []);
-
-  const startRound = () => {
+  const startGame = async () => {
     if (players.length < MIN_PLAYERS) {
       alert(`Need at least ${MIN_PLAYERS} players to start!`);
       return gameState;
     }
 
-    // Select a random topic that hasn't been used yet
+    // Reset all players
+    await supabase
+      .from("players")
+      .update({ score: 0, hasPlayed: false })
+      .or("score.gt.0,hasPlayed.eq.true");
+
     const availableTopics = topics.filter(
       (topic) => !gameState.pastTopics.includes(topic.id)
     );
     const randomTopic =
       availableTopics[Math.floor(Math.random() * availableTopics.length)];
 
-    const drawer = gameState?.nextDrawer || currentPlayer;
+    const drawer = selectNextDrawer(players, gameState.currentDrawer?.id);
     const newState = {
       ...gameState,
       currentDrawer: drawer,
@@ -94,18 +87,22 @@ export function useGameState() {
       pastTopics: [...gameState.pastTopics, randomTopic?.id].filter(
         Boolean
       ) as string[],
-      isGameActive: true,
-      isPaused: false,
+      status: "showTopic" as GameStatus,
       timeLeft: gameState?.currentRoundDuration,
     };
-    setClearCanvas((prev) => prev + 1);
     updateGameState(newState);
-    return newState;
   };
 
-  const handleTimeUp = async (timeLeft: number) => {
+  const startDrawing = () => {
+    updateGameState({
+      ...gameState,
+      status: "drawing",
+    });
+    setClearCanvas((prev) => prev + 1);
+  };
+  const endDrawing = async (timeLeft: number) => {
+    const points = calculateScore(timeLeft, gameState.currentRoundDuration);
     if (gameState?.currentDrawer) {
-      const points = calculateScore(timeLeft, gameState.currentRoundDuration);
       const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
       if (newPlayer) {
         await supabase
@@ -115,16 +112,18 @@ export function useGameState() {
       }
     }
     const next = selectNextDrawer(players, gameState.currentDrawer?.id);
+    const newPlayedRounds = gameState.playedRounds + 1;
+
     updateGameState({
       ...gameState,
-      isPaused: true,
+      status: "waitingForWinner",
       nextDrawer: next,
+      playedRounds: newPlayedRounds,
     });
   };
 
   const handleWinnerSelection = async (winnerId: string) => {
     const winner = getPlayerById(players, winnerId);
-    console.log("winner :>> ", winner);
     if (winner) {
       await supabase
         .from("players")
@@ -132,31 +131,20 @@ export function useGameState() {
         .eq("id", winner.id);
     }
 
-    if (players.length >= MIN_PLAYERS) {
-      const newPlayedRounds = gameState.playedRounds + 1;
-      const totalRounds = players.length;
+    const totalRounds = players.length;
 
-      // check if the game is over
-      if (newPlayedRounds >= totalRounds) {
-        updateGameState({
-          ...gameState,
-          isGameOver: true,
-          isGameActive: false,
-        });
-        return;
-      }
-
+    if (gameState.playedRounds >= totalRounds) {
       updateGameState({
         ...gameState,
-        playedRounds: newPlayedRounds,
+        status: "over",
       });
       return;
     }
 
     updateGameState({
       ...gameState,
-      isGameActive: false,
-      currentDrawer: null,
+      currentDrawer: gameState.nextDrawer,
+      status: "showTopic",
     });
   };
 
@@ -172,7 +160,11 @@ export function useGameState() {
   };
 
   const newGame = () => {
-    updateGameState(getInitialState(gameState.currentRoundDuration));
+    const initialState = getInitialState(gameState.currentRoundDuration);
+    updateGameState({
+      ...initialState,
+      status: "idle",
+    });
   };
 
   useEffect(() => {
@@ -244,15 +236,26 @@ export function useGameState() {
   }, [isLoading, players, setGameState, updateGameState]);
 
   useEffect(() => {
-    fetchTopics();
-  }, [fetchTopics]);
-
-  useEffect(() => {
     if (gameState.currentTopic) {
       const topic = topics.find((topic) => topic.id === gameState.currentTopic);
       setTopic(topic);
     }
   }, [gameState.currentTopic, topics]);
+
+  /**********
+   * fetchTopics
+   * ********/
+
+  const fetchTopics = useCallback(async () => {
+    const { data } = await supabase.from("topics").select("*");
+    if (data) {
+      setTopics(data);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
 
   return {
     currentPlayer,
@@ -261,11 +264,12 @@ export function useGameState() {
     players,
     topic,
     topics,
-    handleTimeUp,
+    endDrawing,
     handleWinnerSelection,
     newGame,
     setTimeLeft,
     setTimer,
-    startRound,
+    startGame,
+    startDrawing,
   };
 }
