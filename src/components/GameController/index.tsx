@@ -29,8 +29,8 @@ export function GameController() {
   const isDrawer = useAtomValue(isDrawerAtom);
   const isNextDrawer = useAtomValue(isNextDrawerAtom);
 
-  const onHandleTimeUp = (timeLeft: number) => {
-    handleTimeUp(timeLeft);
+  const onHandleTimeUp = async (timeLeft: number) => {
+    await handleTimeUp(timeLeft);
     setShowWinnerDialog(true);
   };
 

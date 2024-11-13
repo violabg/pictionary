@@ -55,7 +55,6 @@ export function useGameState() {
   const [topics, setTopics] = useState<Topic[]>([]);
 
   const updateGameState = useCallback(async (newState: GameState) => {
-    setGameState(newState);
     const { id, ...rest } = newState;
     const state: GameStateRemote = {
       ...rest,
@@ -115,11 +114,29 @@ export function useGameState() {
           .eq("id", newPlayer.id);
       }
     }
+    const next = selectNextDrawer(players, gameState.currentDrawer?.id);
+    updateGameState({
+      ...gameState,
+      isPaused: true,
+      nextDrawer: next,
+    });
+  };
+
+  const handleWinnerSelection = async (winnerId: string) => {
+    const winner = getPlayerById(players, winnerId);
+    console.log("winner :>> ", winner);
+    if (winner) {
+      await supabase
+        .from("players")
+        .update({ score: winner.score + GUESS_POINTS })
+        .eq("id", winner.id);
+    }
 
     if (players.length >= MIN_PLAYERS) {
       const newPlayedRounds = gameState.playedRounds + 1;
       const totalRounds = players.length;
 
+      // check if the game is over
       if (newPlayedRounds >= totalRounds) {
         updateGameState({
           ...gameState,
@@ -129,12 +146,9 @@ export function useGameState() {
         return;
       }
 
-      const next = selectNextDrawer(players, gameState.currentDrawer?.id);
       updateGameState({
         ...gameState,
         playedRounds: newPlayedRounds,
-        nextDrawer: next,
-        isPaused: true,
       });
       return;
     }
@@ -159,16 +173,6 @@ export function useGameState() {
 
   const newGame = () => {
     updateGameState(getInitialState(gameState.currentRoundDuration));
-  };
-
-  const handleWinnerSelection = async (winnerId: string) => {
-    const winner = getPlayerById(players, winnerId);
-    if (winner) {
-      await supabase
-        .from("players")
-        .update({ score: winner.score + GUESS_POINTS })
-        .eq("id", winner.id);
-    }
   };
 
   useEffect(() => {

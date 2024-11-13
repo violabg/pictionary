@@ -44,6 +44,7 @@ export function PlayersList() {
         },
         (payload) => {
           const player = payload.new as Player;
+
           if (payload.eventType === "INSERT") {
             setPlayers((current) => [...current, player]);
           } else if (payload.eventType === "DELETE") {
