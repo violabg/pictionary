@@ -46,6 +46,10 @@ export function WinnerDialog({
           onValueChange={setSelectedPlayer}
           className="gap-4"
         >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="none" id="none" />
+            <Label htmlFor="none">Nessuno</Label>
+          </div>
           {eligiblePlayers.map((player) => (
             <div key={player.id} className="flex items-center space-x-2">
               <RadioGroupItem value={player.id} id={player.id} />
