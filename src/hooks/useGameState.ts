@@ -12,7 +12,7 @@ import {
   GUESS_POINTS,
   MIN_PLAYERS,
   selectNextDrawer,
-} from "@/lib/gameStateServices";
+} from "@/lib/gameServices";
 import { getPlayerById } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
 import { GameState, GameStateRemote, GameStatus, Topic } from "@/types";
