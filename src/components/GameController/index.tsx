@@ -10,6 +10,7 @@ import { TimerSettings } from "../Timer/TimerSettings";
 import { GameOver } from "./GameOver";
 import PlayersList from "./PlayersList";
 import TimerWithButton from "./TimerWithButton";
+import { TopicCard } from "./TopicCard";
 import { WinnerDialog } from "./WinnerDialog";
 
 export function GameController() {
@@ -66,14 +67,7 @@ export function GameController() {
           {gameState.isGameActive &&
             !gameState.isPaused &&
             isDrawer &&
-            topic && (
-              <div className="bg-primary p-2 rounded-lg">
-                <p className="mb-4 font-bold text-primary-foreground text-xl">
-                  {topic.title}
-                </p>
-                <p className="text-sm">{topic.description}</p>
-              </div>
-            )}
+            topic && <TopicCard topic={topic} />}
           {!gameState.isGameActive ? (
             <Button
               disabled={players.length < 2}
@@ -85,8 +79,10 @@ export function GameController() {
               Start Game
             </Button>
           ) : (
-            gameState.isPaused && (
+            gameState.isPaused &&
+            topic && (
               <div className="space-y-2">
+                <TopicCard topic={topic} />
                 {isNextDrawer && (
                   <Button
                     className="w-full"
@@ -125,6 +121,7 @@ export function GameController() {
               open={showWinnerDialog}
               players={players}
               currentDrawer={gameState.currentDrawer}
+              topic={topic}
               onSelectWinner={async (winnerId) => {
                 await handleWinnerSelection(winnerId);
                 setShowWinnerDialog(false);
