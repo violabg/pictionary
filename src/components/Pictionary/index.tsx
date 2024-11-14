@@ -17,9 +17,7 @@ function PictionaryContent() {
           : "grid-rows-[1fr] [grid-template-areas:'sidebar_content']"
       } p-2 h-[100vh]`}
     >
-      <aside className="[grid-area:sidebar]">
-        <GameController />
-      </aside>
+      <GameController />
       <Whiteboard />
     </div>
   );

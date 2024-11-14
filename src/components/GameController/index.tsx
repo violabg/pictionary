@@ -2,6 +2,7 @@
 
 import { isDrawerAtom } from "@/atoms";
 import { Button } from "@/components/ui/button";
+import { Section } from "@/components/ui/Section";
 import { useGameState } from "@/hooks/useGameState";
 import { useAtomValue } from "jotai";
 import { Clock, Play } from "lucide-react";
@@ -32,7 +33,10 @@ export function GameController() {
   if (isLoading) return <div>Loading...</div>;
 
   return (
-    <div className="flex flex-col gap-2 bg-gray-800 p-2 rounded-md min-w-[200px] h-full">
+    <Section
+      as="aside"
+      className="flex flex-col gap-2 [grid-area:sidebar] bg-gray-800 p-2 rounded-md min-w-[200px] h-full"
+    >
       {gameState.status === "idle" && (
         <>
           <Button
@@ -110,6 +114,6 @@ export function GameController() {
         onSetTimer={setTimer}
         currentTime={gameState.currentRoundDuration}
       />
-    </div>
+    </Section>
   );
 }

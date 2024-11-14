@@ -1,6 +1,7 @@
 import { gameStateAtom } from "@/atoms";
 import { useAtomValue } from "jotai";
 import React, { useRef, useState } from "react";
+import { Section } from "../ui/Section";
 
 type Props = {
   isErasing: boolean;
@@ -64,11 +65,11 @@ const Canvas: React.FC<Props> = ({
             onMouseLeave={stopDrawing}
           />
           {!drawingEnabled && (
-            <div className="absolute inset-0 flex justify-center items-center bg-gray-800 rounded-md">
+            <Section className="absolute inset-0 flex justify-center items-center">
               <div className="bg-black/90 shadow-lg p-6 rounded-lg text-center">
                 <h2 className="font-bold text-xl">Waiting to start...</h2>
               </div>
-            </div>
+            </Section>
           )}
         </div>
       </div>

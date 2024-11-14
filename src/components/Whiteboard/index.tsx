@@ -1,6 +1,7 @@
 "use client";
 
 import { isDrawerAtom } from "@/atoms";
+import { Section } from "@/components/ui/Section";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useAtomValue } from "jotai";
 import { useRef } from "react";
@@ -45,7 +46,10 @@ export default function Whiteboard() {
   return (
     <>
       {isDrawer && (
-        <header className="[grid-area:header] flex items-center gap-2 col-span-2 bg-gray-800 p-2 rounded-md }">
+        <Section
+          as="header"
+          className="flex items-center gap-2 [grid-area:header] col-span-2"
+        >
           <DrawingToolbar
             canUndo={history.length > 1}
             isDrawer={isDrawer}
@@ -53,9 +57,9 @@ export default function Whiteboard() {
             onClear={clear}
             onToolChange={handleToolChange}
           />
-        </header>
+        </Section>
       )}
-      <main className="relative [grid-area:content] bg-gray-800 p-2 rounded-md">
+      <Section as="main" className="relative [grid-area:content]">
         <Canvas
           canvasRef={canvasRef}
           isErasing={isErasing}
@@ -64,7 +68,7 @@ export default function Whiteboard() {
           onStartDrawing={_onStartDrawing}
           onStopDrawing={_onStopDrawing}
         />
-      </main>
+      </Section>
     </>
   );
 }
