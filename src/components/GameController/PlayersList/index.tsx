@@ -1,5 +1,6 @@
 import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
 import { Card } from "@/components/ui/Card";
+import { Loading } from "@/components/ui/loading";
 import { getOrCreatePlayer } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
 import type { Player } from "@/types";
@@ -84,7 +85,7 @@ export function PlayersList() {
   return (
     <Card className="space-y-1 px-2 py-4">
       {isLoading ? (
-        <div>Loading...</div>
+        <Loading />
       ) : (
         <>
           {players.map((player) => {
