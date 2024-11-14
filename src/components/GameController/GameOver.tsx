@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/Card";
 import { Player } from "@/types";
 import { Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -32,7 +33,7 @@ export function GameOver({ players, onNewGame }: Props) {
   }, []);
 
   return (
-    <div className="bg-black/90 p-4 rounded-md">
+    <Card>
       <Confetti
         width={windowSize.width}
         height={windowSize.height}
@@ -59,6 +60,6 @@ export function GameOver({ players, onNewGame }: Props) {
       <Button onClick={onNewGame} className="mt-4 w-full">
         Play Again
       </Button>
-    </div>
+    </Card>
   );
 }

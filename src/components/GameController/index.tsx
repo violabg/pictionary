@@ -2,6 +2,7 @@
 
 import { isDrawerAtom } from "@/atoms";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
 import { useGameState } from "@/hooks/useGameState";
 import { useAtomValue } from "jotai";
@@ -35,20 +36,19 @@ export function GameController() {
   return (
     <Section
       as="aside"
-      className="flex flex-col gap-2 [grid-area:sidebar] bg-gray-800 p-2 rounded-md min-w-[200px] h-full"
+      className="flex flex-col gap-2 [grid-area:sidebar] p-2 min-w-[200px] h-full"
     >
       {gameState.status === "idle" && (
         <>
           <Button
             onClick={() => setIsTimerSettingsOpen(true)}
-            size="sm"
             variant="outline"
             title="Set Timer"
           >
             <Clock className="mr-2 w-4 h-4" />
             {gameState.currentRoundDuration}s
           </Button>
-          <Button disabled={players.length < 2} size="sm" onClick={startGame}>
+          <Button disabled={players.length < 2} onClick={startGame}>
             <Play />
             Start Game
           </Button>
@@ -56,17 +56,17 @@ export function GameController() {
       )}
 
       {gameState.status !== "idle" && gameState.status !== "over" && (
-        <div className="bg-black/90 p-2 rounded-lg text-center text-sm">
+        <Card className="p-2 text-center text-sm">
           Round {gameState.playedRounds + 1} of {players.length}
-        </div>
+        </Card>
       )}
 
       {gameState.status === "waitingForWinner" && (
-        <div className="bg-black/90 p-2 rounded-lg text-center">
+        <Card className="p-2 text-center">
           <p>
             Next player: <strong>{gameState.nextDrawer?.name}</strong>
           </p>
-        </div>
+        </Card>
       )}
 
       {gameState.status === "showTopic" && isDrawer && topic && (

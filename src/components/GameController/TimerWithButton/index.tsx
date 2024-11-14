@@ -1,5 +1,6 @@
 import { Timer } from "@/components/Timer";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/Card";
 import { GameState } from "@/types";
 import { Pause } from "lucide-react";
 import { useState } from "react";
@@ -27,14 +28,14 @@ const TimerWithButton = (props: Props) => {
           End Round
         </Button>
       )}
-      <div className="bg-black/90 p-4 rounded-lg">
+      <Card>
         <Timer
           displayTime={displayTime}
           setDisplayTime={setDisplayTime}
           isActive={gameState.status === "drawing"}
           onTimeUp={onTimeUp}
         />
-      </div>
+      </Card>
     </>
   );
 };

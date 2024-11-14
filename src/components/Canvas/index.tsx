@@ -1,4 +1,5 @@
 import { gameStateAtom } from "@/atoms";
+import { Card } from "@/components/ui/Card";
 import { useAtomValue } from "jotai";
 import React, { useRef, useState } from "react";
 import { Section } from "../ui/Section";
@@ -66,9 +67,9 @@ const Canvas: React.FC<Props> = ({
           />
           {!drawingEnabled && (
             <Section className="absolute inset-0 flex justify-center items-center">
-              <div className="bg-black/90 shadow-lg p-6 rounded-lg text-center">
+              <Card className="shadow-lg p-6 text-center">
                 <h2 className="font-bold text-xl">Waiting to start...</h2>
-              </div>
+              </Card>
             </Section>
           )}
         </div>

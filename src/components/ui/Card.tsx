@@ -1,19 +1,19 @@
 import { cn } from "@/lib/utils";
 import { ElementType } from "react";
 
-interface SectionProps {
+interface CardProps {
   as?: ElementType;
   className?: string;
   children: React.ReactNode;
 }
 
-export function Section({
+export function Card({
   as: Component = "div",
   className,
   children,
-}: SectionProps) {
+}: CardProps) {
   return (
-    <Component className={cn("bg-gray-800 p-2 rounded-lg", className)}>
+    <Component className={cn("bg-gray-950 p-4 rounded-lg", className)}>
       {children}
     </Component>
   );

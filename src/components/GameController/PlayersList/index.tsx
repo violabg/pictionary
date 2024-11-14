@@ -1,4 +1,5 @@
 import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
+import { Card } from "@/components/ui/Card";
 import { getOrCreatePlayer } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
 import type { Player } from "@/types";
@@ -81,7 +82,7 @@ export function PlayersList() {
   };
 
   return (
-    <div className="space-y-1 bg-black/90 px-2 py-4 rounded-lg">
+    <Card className="space-y-1 px-2 py-4">
       {isLoading ? (
         <div>Loading...</div>
       ) : (
@@ -133,7 +134,7 @@ export function PlayersList() {
           onAddPlayer={handleAddPlayer}
         />
       )}
-    </div>
+    </Card>
   );
 }
 
