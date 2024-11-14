@@ -33,7 +33,7 @@ export function WinnerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-gray-900">
+      <DialogContent>
         <DialogHeader className="gap-2">
           <DialogTitle>Correct answer:</DialogTitle>
         </DialogHeader>

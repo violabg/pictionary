@@ -57,7 +57,7 @@ const Canvas: React.FC<Props> = ({
         <div className="absolute inset-0">
           <canvas
             ref={canvasRef}
-            className={`w-full h-full bg-white rounded-md ${
+            className={`w-full h-full bg-white rounded-lg ${
               isErasing ? "cursor-none" : "cursor-crosshair"
             } ${!drawingEnabled ? "pointer-events-none" : ""}`}
             onMouseDown={startDrawing}
@@ -66,7 +66,7 @@ const Canvas: React.FC<Props> = ({
             onMouseLeave={stopDrawing}
           />
           {!drawingEnabled && (
-            <Section className="absolute inset-0 flex justify-center items-center">
+            <Section className="absolute inset-0 flex justify-center items-center opacity-95">
               <Card className="shadow-lg p-6 text-center">
                 <h2 className="font-bold text-xl">Waiting to start...</h2>
               </Card>
