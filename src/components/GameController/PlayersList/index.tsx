@@ -3,6 +3,7 @@ import { getOrCreatePlayer } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
 import type { Player } from "@/types";
 import { useAtom, useAtomValue } from "jotai";
+import { Loader, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddPlayerDialog } from "../AddPlayerDialog";
 
@@ -12,6 +13,7 @@ export function PlayersList() {
   const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
+  const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     const getPlayers = async () => {
@@ -71,6 +73,13 @@ export function PlayersList() {
     setShowAuthDialog(false);
   };
 
+  const handleDeletePlayer = async (playerId: string) => {
+    setDeletingPlayerId(playerId);
+    await supabase.from("players").delete().eq("id", playerId);
+    setPlayers((current) => current.filter((p) => p.id !== playerId));
+    setDeletingPlayerId(null);
+  };
+
   return (
     <div className="space-y-1 bg-white/90 px-2 py-4 rounded-lg">
       {isLoading ? (
@@ -81,7 +90,7 @@ export function PlayersList() {
             return (
               <div
                 key={player.id}
-                className={`flex items-center gap-2 py-1 px-2 rounded-sm ${
+                className={`flex items-center gap-2 py-1 px-2 rounded-md ${
                   gameState.currentDrawer?.id === player.id
                     ? "font-bold bg-secondary text-white"
                     : ""
@@ -98,6 +107,20 @@ export function PlayersList() {
                 {gameState.currentDrawer?.id === player.id && (
                   <span className="text-sm text-white">(Drawing)</span>
                 )}
+                {gameState.status === "idle" &&
+                  player.id !== currentPlayer?.id && (
+                    <button
+                      className="ml-auto"
+                      onClick={() => handleDeletePlayer(player.id)}
+                      disabled={deletingPlayerId === player.id}
+                    >
+                      {deletingPlayerId === player.id ? (
+                        <Loader className="w-5 h-5 text-red-500 animate-spin" />
+                      ) : (
+                        <Trash className="w-5 h-5 text-red-500" />
+                      )}
+                    </button>
+                  )}
               </div>
             );
           })}
