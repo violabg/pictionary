@@ -8,12 +8,19 @@ import {
 } from "@/atoms";
 import {
   calculateScore,
+  fetchTopics,
+  getOrCreateGameState,
   getRandomTopic,
   GUESS_POINTS,
   MIN_PLAYERS,
-  selectNextDrawer,
+  updateGame,
 } from "@/lib/gameServices";
-import { getPlayerById } from "@/lib/playerService";
+import {
+  getPlayerById,
+  resetPlayerScores,
+  selectNextDrawer,
+  updatePlayerScore,
+} from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
 import { GameState, GameStateRemote, GameStatus, Topic } from "@/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
@@ -44,14 +51,7 @@ export function useGameState() {
    */
   const updateGameState = useCallback(
     async (newState: GameState) => {
-      const { id, ...rest } = newState;
-      const state: GameStateRemote = {
-        ...rest,
-        currentDrawer: newState.currentDrawer?.id ?? null,
-        nextDrawer: newState.nextDrawer?.id ?? null,
-      };
-
-      await supabase.from("games").update(state).eq("room_id", gameId);
+      await updateGame(gameId, newState);
       setGameState(newState);
     },
     [setGameState]
@@ -69,10 +69,7 @@ export function useGameState() {
     }
 
     // Reset player scores and states
-    await supabase
-      .from("players")
-      .update({ score: 0, hasPlayed: false })
-      .or("score.gt.0,hasPlayed.eq.true");
+    await resetPlayerScores();
 
     // Select random topic and initialize new round
     const randomTopic = getRandomTopic(topics, gameState.pastTopics);
@@ -113,10 +110,7 @@ export function useGameState() {
     if (gameState?.currentDrawer) {
       const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
       if (newPlayer) {
-        await supabase
-          .from("players")
-          .update({ score: newPlayer.score + points, hasPlayed: true })
-          .eq("id", newPlayer.id);
+        await updatePlayerScore(newPlayer.id, newPlayer.score + points, true);
       }
     }
     const next = selectNextDrawer(players, gameState.currentDrawer?.id);
@@ -138,10 +132,11 @@ export function useGameState() {
     // Award points to the winner
     const winner = getPlayerById(players, winnerId);
     if (winner) {
-      await supabase
-        .from("players")
-        .update({ score: winner.score + GUESS_POINTS })
-        .eq("id", winner.id);
+      await updatePlayerScore(
+        winner.id,
+        winner.score + GUESS_POINTS,
+        !!winner.hasPlayed
+      );
     }
 
     const totalRounds = players.length;
@@ -191,27 +186,12 @@ export function useGameState() {
    */
   useEffect(() => {
     const getGameState = async () => {
-      const { data } = await supabase
-        .from("games")
-        .select("*")
-        .eq("room_id", gameId)
-        .single();
-
-      if (!data) {
-        // Create new game state if it doesn't exist
-        const initialState = getInitialState(DEFAULT_ROUND_DURATION);
-        const { data: newGameState } = await supabase
-          .from("games")
-          .insert([{ room_id: gameId, ...initialState }])
-          .select()
-          .single();
-
-        setGameState(newGameState);
-        setIsLoading(false);
-      } else {
-        await updateGameState(getInitialState(DEFAULT_ROUND_DURATION));
-        setIsLoading(false);
-      }
+      const data = await getOrCreateGameState(
+        gameId,
+        getInitialState(DEFAULT_ROUND_DURATION)
+      );
+      setGameState(data);
+      setIsLoading(false);
     };
 
     // Initialize game state if loading
@@ -271,17 +251,15 @@ export function useGameState() {
   /**
    * Fetches available topics from the database
    */
-  const fetchTopics = useCallback(async () => {
-    const { data } = await supabase.from("topics").select("*");
-    if (data) {
-      setTopics(data);
-    }
+  const initTopics = useCallback(async () => {
+    const data = await fetchTopics();
+    setTopics(data);
   }, []);
 
   // Initialize topics on component mount
   useEffect(() => {
-    fetchTopics();
-  }, [fetchTopics]);
+    initTopics();
+  }, [initTopics]);
 
   // Return hook interface
   return {
