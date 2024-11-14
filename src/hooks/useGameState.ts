@@ -4,6 +4,8 @@ import {
   DEFAULT_ROUND_DURATION,
   gameStateAtom,
   getInitialState,
+  isLoadingAtom,
+  loadingAtom,
   playersAtom,
 } from "@/atoms";
 import {
@@ -22,7 +24,7 @@ import {
   updatePlayerScore,
 } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
-import { GameState, GameStateRemote, GameStatus, Topic } from "@/types";
+import { GameState, GameStateRemote, GameStatus, Player, Topic } from "@/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
@@ -33,11 +35,12 @@ const gameId = "spindox";
  * Handles real-time game state updates, player management, and game flow
  */
 export function useGameState() {
+  const [loading, setLoading] = useAtom(loadingAtom);
+  const isLoading = useAtomValue(isLoadingAtom);
   // State management atoms and local state
-  const [isLoading, setIsLoading] = useState(true);
   const [gameState, setGameState] = useAtom(gameStateAtom);
 
-  const players = useAtomValue(playersAtom);
+  const [players, setPlayers] = useAtom(playersAtom);
   const currentPlayer = useAtomValue(currentPlayerAtom);
 
   const setClearCanvas = useSetAtom(clearCanvasAtom);
@@ -191,11 +194,11 @@ export function useGameState() {
         getInitialState(DEFAULT_ROUND_DURATION)
       );
       setGameState(data);
-      setIsLoading(false);
+      setLoading((l) => ({ ...l, game: false }));
     };
 
     // Initialize game state if loading
-    if (isLoading) {
+    if (loading.game) {
       getGameState();
     }
 
@@ -236,7 +239,79 @@ export function useGameState() {
     return () => {
       supabase.removeChannel(gameSubscription);
     };
-  }, [isLoading, players, setGameState, updateGameState]);
+  }, [loading.game, players, setGameState, setLoading]);
+
+  /**
+   * Effect hook for getting players from the database and setting up real-time subscriptions
+   */
+  useEffect(() => {
+    const getPlayers = async () => {
+      const { data } = await supabase.from("players").select("*");
+
+      if (data) {
+        const players = data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          score: 0,
+          hasPlayed: false,
+        }));
+        setPlayers(players);
+      } else {
+        setPlayers([]);
+      }
+      setLoading((l) => ({ ...l, players: false }));
+    };
+    if (loading.players) {
+      getPlayers();
+    }
+
+    // Real-time subscription
+    const playersSubscription = supabase
+      .channel("players_channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "players",
+        },
+        (payload) => {
+          const player = payload.new as Player;
+
+          if (payload.eventType === "INSERT") {
+            setPlayers((current) => [...current, player]);
+          } else if (payload.eventType === "DELETE") {
+            setPlayers((current) =>
+              current.filter((p) => p.id !== payload.old.id)
+            );
+          } else if (payload.eventType === "UPDATE") {
+            setPlayers((current) =>
+              current.map((p) => (p.id === player.id ? player : p))
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(playersSubscription);
+    };
+  }, [setPlayers, setLoading, loading.players]);
+
+  /**
+   * Fetches available topics from the database
+   */
+  useEffect(() => {
+    const initTopics = async () => {
+      const data = await fetchTopics();
+      setTopics(data);
+      setLoading((l) => ({ ...l, topics: false }));
+    };
+
+    if (loading.topics) {
+      initTopics();
+    }
+  }, [loading.topics, setLoading]);
 
   /**
    * Effect hook for updating current topic when it changes
@@ -247,19 +322,6 @@ export function useGameState() {
       setTopic(topic);
     }
   }, [gameState.currentTopic, topics]);
-
-  /**
-   * Fetches available topics from the database
-   */
-  const initTopics = useCallback(async () => {
-    const data = await fetchTopics();
-    setTopics(data);
-  }, []);
-
-  // Initialize topics on component mount
-  useEffect(() => {
-    initTopics();
-  }, [initTopics]);
 
   // Return hook interface
   return {

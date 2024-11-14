@@ -37,3 +37,18 @@ export const isNextDrawerAtom = atom((get) => {
 });
 
 export const clearCanvasAtom = atom<number>(0);
+
+export const loadingAtom = atom<{
+  players: boolean;
+  game: boolean;
+  topics: boolean;
+}>({
+  players: true,
+  game: true,
+  topics: true,
+});
+
+export const isLoadingAtom = atom((get) => {
+  const loading = get(loadingAtom);
+  return loading.players || loading.game || loading.topics;
+});

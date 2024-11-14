@@ -54,6 +54,14 @@ export const getOrCreateGameState = async (
       .select()
       .single();
     return newGameState;
+  } else if (data.status !== "idle") {
+    const { data: updatedGameState } = await supabase
+      .from("games")
+      .update(initialState)
+      .eq("room_id", gameId)
+      .select()
+      .single();
+    return updatedGameState;
   }
 
   return data;
