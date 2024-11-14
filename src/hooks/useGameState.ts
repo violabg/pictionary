@@ -42,16 +42,20 @@ export function useGameState() {
    * Updates the game state in the Supabase database
    * Converts local state to remote format by handling player references
    */
-  const updateGameState = useCallback(async (newState: GameState) => {
-    const { id, ...rest } = newState;
-    const state: GameStateRemote = {
-      ...rest,
-      currentDrawer: newState.currentDrawer?.id ?? null,
-      nextDrawer: newState.nextDrawer?.id ?? null,
-    };
+  const updateGameState = useCallback(
+    async (newState: GameState) => {
+      const { id, ...rest } = newState;
+      const state: GameStateRemote = {
+        ...rest,
+        currentDrawer: newState.currentDrawer?.id ?? null,
+        nextDrawer: newState.nextDrawer?.id ?? null,
+      };
 
-    await supabase.from("games").update(state).eq("room_id", gameId);
-  }, []);
+      await supabase.from("games").update(state).eq("room_id", gameId);
+      setGameState(newState);
+    },
+    [setGameState]
+  );
 
   /**
    * Initiates a new game session
@@ -161,11 +165,6 @@ export function useGameState() {
       ) as string[],
       status: "showTopic",
     });
-  };
-
-  // Utility functions for time management
-  const setTimeLeft = (seconds: number) => {
-    updateGameState({ ...gameState, timeLeft: seconds });
   };
 
   const setTimer = (seconds: number) => {
@@ -295,7 +294,6 @@ export function useGameState() {
     endDrawing,
     handleWinnerSelection,
     newGame,
-    setTimeLeft,
     setTimer,
     startGame,
     startDrawing,
