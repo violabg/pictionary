@@ -45,7 +45,7 @@ export default function Whiteboard() {
   return (
     <>
       {isDrawer && (
-        <header className="[grid-area:header] flex items-center gap-2 col-span-2 bg-black/20 p-2 rounded-md }">
+        <header className="[grid-area:header] flex items-center gap-2 col-span-2 bg-gray-800 p-2 rounded-md }">
           <DrawingToolbar
             canUndo={history.length > 1}
             isDrawer={isDrawer}
@@ -55,7 +55,7 @@ export default function Whiteboard() {
           />
         </header>
       )}
-      <main className="relative [grid-area:content] bg-black/20 p-2 rounded-md">
+      <main className="relative [grid-area:content] bg-gray-800 p-2 rounded-md">
         <Canvas
           canvasRef={canvasRef}
           isErasing={isErasing}

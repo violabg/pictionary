@@ -32,7 +32,7 @@ export function GameController() {
   if (isLoading) return <div>Loading...</div>;
 
   return (
-    <div className="flex flex-col gap-2 bg-black/20 p-2 rounded-md min-w-[200px] h-full">
+    <div className="flex flex-col gap-2 bg-gray-800 p-2 rounded-md min-w-[200px] h-full">
       {gameState.status === "idle" && (
         <>
           <Button
@@ -44,12 +44,7 @@ export function GameController() {
             <Clock className="mr-2 w-4 h-4" />
             {gameState.currentRoundDuration}s
           </Button>
-          <Button
-            disabled={players.length < 2}
-            size="sm"
-            variant={"secondary"}
-            onClick={startGame}
-          >
+          <Button disabled={players.length < 2} size="sm" onClick={startGame}>
             <Play />
             Start Game
           </Button>
@@ -57,13 +52,13 @@ export function GameController() {
       )}
 
       {gameState.status !== "idle" && gameState.status !== "over" && (
-        <div className="bg-white/90 p-2 rounded-lg text-center text-sm">
+        <div className="bg-black/90 p-2 rounded-lg text-center text-sm">
           Round {gameState.playedRounds + 1} of {players.length}
         </div>
       )}
 
       {gameState.status === "waitingForWinner" && (
-        <div className="bg-white/90 p-2 rounded-lg text-center">
+        <div className="bg-black/90 p-2 rounded-lg text-center">
           <p>
             Next player: <strong>{gameState.nextDrawer?.name}</strong>
           </p>

@@ -27,7 +27,7 @@ const TimerWithButton = (props: Props) => {
           End Round
         </Button>
       )}
-      <div className="bg-white/90 p-4 rounded-lg">
+      <div className="bg-black/90 p-4 rounded-lg">
         <Timer
           displayTime={displayTime}
           setDisplayTime={setDisplayTime}

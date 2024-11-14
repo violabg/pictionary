@@ -64,8 +64,8 @@ const Canvas: React.FC<Props> = ({
             onMouseLeave={stopDrawing}
           />
           {!drawingEnabled && (
-            <div className="absolute inset-0 flex justify-center items-center bg-black/20 rounded-md">
-              <div className="bg-white shadow-lg p-6 rounded-lg text-center">
+            <div className="absolute inset-0 flex justify-center items-center bg-gray-800 rounded-md">
+              <div className="bg-black/90 shadow-lg p-6 rounded-lg text-center">
                 <h2 className="font-bold text-xl">Waiting to start...</h2>
               </div>
             </div>

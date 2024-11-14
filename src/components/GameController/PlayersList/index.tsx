@@ -81,7 +81,7 @@ export function PlayersList() {
   };
 
   return (
-    <div className="space-y-1 bg-white/90 px-2 py-4 rounded-lg">
+    <div className="space-y-1 bg-black/90 px-2 py-4 rounded-lg">
       {isLoading ? (
         <div>Loading...</div>
       ) : (
