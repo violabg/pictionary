@@ -72,7 +72,7 @@ export function PlayersList() {
   };
 
   return (
-    <div className="space-y-2 bg-white/90 p-4 rounded-lg">
+    <div className="space-y-1 bg-white/90 px-2 py-4 rounded-lg">
       {isLoading ? (
         <div>Loading...</div>
       ) : (
@@ -81,20 +81,22 @@ export function PlayersList() {
             return (
               <div
                 key={player.id}
-                className={`flex items-center gap-2 ${
-                  gameState.currentDrawer?.id === player.id ? "font-bold" : ""
+                className={`flex items-center gap-2 py-1 px-2 rounded-sm ${
+                  gameState.currentDrawer?.id === player.id
+                    ? "font-bold bg-secondary text-white"
+                    : ""
                 }`}
               >
                 <span
                   className={`${
-                    player.id === currentPlayer?.id ? "text-primary" : ""
+                    player.id === currentPlayer?.id ? "font-bold" : ""
                   }`}
                 >
                   {player.name}
                 </span>
                 <span className="text-sm">({player.score} pts)</span>
                 {gameState.currentDrawer?.id === player.id && (
-                  <span className="text-blue-600 text-sm">(Drawing)</span>
+                  <span className="text-sm text-white">(Drawing)</span>
                 )}
               </div>
             );
