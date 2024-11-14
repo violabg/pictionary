@@ -49,7 +49,7 @@ export function GameController() {
                 title="Set Timer"
               >
                 <Clock className="mr-2 w-4 h-4" />
-                {gameState.currentRoundDuration}s
+                {`Change current time ${gameState.currentRoundDuration}s`}
               </Button>
               <Button disabled={players.length < 2} onClick={startGame}>
                 <Play />

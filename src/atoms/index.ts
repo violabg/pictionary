@@ -3,7 +3,7 @@ import { atom } from "jotai";
 
 export const playersAtom = atom<Player[]>([]);
 export const currentPlayerAtom = atom<Player>();
-export const DEFAULT_ROUND_DURATION = 120;
+export const DEFAULT_ROUND_DURATION = 150;
 // Initial State
 export const getInitialState = (roundDuration: number): GameState => ({
   status: "idle",
