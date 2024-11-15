@@ -1,6 +1,6 @@
 import { Timer } from "@/components/Timer";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { GameState } from "@/types";
 import { Pause } from "lucide-react";
 import { useState } from "react";
@@ -28,7 +28,7 @@ const TimerWithButton = (props: Props) => {
           End Round
         </Button>
       )}
-      <Card>
+      <Card className="p-4">
         <Timer
           displayTime={displayTime}
           setDisplayTime={setDisplayTime}

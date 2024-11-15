@@ -1,5 +1,5 @@
 import { gameStateAtom } from "@/atoms";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { useAtomValue } from "jotai";
 import React, { useRef, useState } from "react";
 import { Section } from "../ui/Section";

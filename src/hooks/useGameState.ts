@@ -73,7 +73,6 @@ export function useGameState() {
 
     // Reset player scores and states
     await resetPlayerScores();
-
     // Select random topic and initialize new round
     const randomTopic = getRandomTopic(topics, gameState.pastTopics);
 
@@ -165,17 +164,12 @@ export function useGameState() {
     });
   };
 
-  const setTimer = (seconds: number) => {
-    updateGameState({
-      ...gameState,
-      currentRoundDuration: seconds,
-    });
-  };
-
   /**
    * Resets the game to initial state while preserving round duration
    */
-  const newGame = () => {
+  const newGame = async () => {
+    // Reset player scores and states
+    await resetPlayerScores();
     const initialState = getInitialState(gameState.currentRoundDuration);
     updateGameState({
       ...initialState,
@@ -183,6 +177,15 @@ export function useGameState() {
     });
   };
 
+  /**
+   * Sets the round duration for the current game
+   */
+  const setTimer = (seconds: number) => {
+    updateGameState({
+      ...gameState,
+      currentRoundDuration: seconds,
+    });
+  };
   /**
    * Effect hook for initializing game state and setting up real-time subscriptions
    * Handles initial game state creation and updates from Supabase

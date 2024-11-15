@@ -2,7 +2,7 @@
 
 import { isDrawerAtom } from "@/atoms";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { Section } from "@/components/ui/Section";
 import { useGameState } from "@/hooks/useGameState";
@@ -64,13 +64,15 @@ export function GameController() {
             </Card>
           )}
 
-          {gameState.status === "waitingForWinner" && (
-            <Card className="p-2 text-center">
-              <p>
-                Next player: <strong>{gameState.nextDrawer?.name}</strong>
-              </p>
-            </Card>
-          )}
+          {(gameState.status === "waitingForWinner" ||
+            (gameState.status === "showTopic" && !isDrawer)) &&
+            gameState.nextDrawer && (
+              <Card className="p-2 text-center">
+                <p>
+                  Next player: <strong>{gameState.nextDrawer?.name}</strong>
+                </p>
+              </Card>
+            )}
 
           {gameState.status === "showTopic" && isDrawer && topic && (
             <>

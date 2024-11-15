@@ -1,7 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Player } from "@/types";
 import { Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -40,26 +46,34 @@ export function GameOver({ players, onNewGame }: Props) {
         recycle={false}
         numberOfPieces={500}
       />
-      <h2 className="mb-4 font-bold text-2xl text-center">Game Over!</h2>
-      <div className="space-y-4">
-        {players.map((player, index) => (
-          <div
-            key={player.id}
-            className={`flex items-center gap-2 ${
-              index === 0 ? "text-xl font-bold" : ""
-            }`}
-          >
-            {index === 0 && <Trophy className="text-yellow-500" />}
-            <span>
-              {index + 1}. {player.name}
-            </span>
-            <span className="text-sm">({player.score} pts)</span>
-          </div>
-        ))}
-      </div>
-      <Button onClick={onNewGame} className="mt-4 w-full">
-        Play Again
-      </Button>
+      <CardHeader>
+        <CardTitle className="text-2xl text-center text-primary">
+          Game Over!
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {players.map((player, index) => (
+            <div
+              key={player.id}
+              className={`flex items-center gap-2 ${
+                index === 0 ? "text-xl font-bold" : ""
+              }`}
+            >
+              {index === 0 && <Trophy className="text-yellow-500" />}
+              <span>
+                {index + 1}. {player.name}
+              </span>
+              <span className="text-sm">({player.score} pts)</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={onNewGame} className="mt-4 w-full">
+          Play Again
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

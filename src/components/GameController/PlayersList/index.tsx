@@ -1,9 +1,9 @@
 import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { getOrCreatePlayer } from "@/lib/playerService";
 import { supabase } from "@/lib/supabaseClient";
 import { useAtom, useAtomValue } from "jotai";
-import { Loader, Trash } from "lucide-react";
+import { Loader, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { AddPlayerDialog } from "../AddPlayerDialog";
 
@@ -35,7 +35,7 @@ export function PlayersList() {
             key={player.id}
             className={`flex items-center gap-2 py-1 px-2 rounded-md ${
               gameState.currentDrawer?.id === player.id
-                ? "font-bold bg-secondary text-white"
+                ? " text-white border border-secondary"
                 : ""
             }`}
           >
@@ -48,7 +48,7 @@ export function PlayersList() {
             </span>
             <span className="text-sm">({player.score} pts)</span>
             {gameState.currentDrawer?.id === player.id && (
-              <span className="text-sm text-white">(Drawing)</span>
+              <Pencil className="ml-auto w-4 h-4 text-primary" />
             )}
             {gameState.status === "idle" && player.id !== currentPlayer?.id && (
               <button
