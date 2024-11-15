@@ -5,7 +5,7 @@ import { Section } from "@/components/ui/Section";
 import { useCanvas } from "@/hooks/useCanvas";
 import { DrawingSettings } from "@/types";
 import { useAtomValue } from "jotai";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Canvas from "../Canvas";
 import { DrawingToolbar } from "../DrawingToolbar";
 
@@ -26,6 +26,7 @@ export default function Whiteboard() {
     stopDrawing,
     clear,
     undo,
+    updateCanvasSize,
   } = useCanvas(canvasRef);
 
   const handleToolChange = ({
@@ -44,6 +45,12 @@ export default function Whiteboard() {
   const _onStopDrawing = () => {
     if (isDrawer) stopDrawing();
   };
+
+  useEffect(() => {
+    console.log("showDrawingTools :>> ", showDrawingTools);
+
+    updateCanvasSize();
+  }, [showDrawingTools, updateCanvasSize]);
 
   return (
     <>

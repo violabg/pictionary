@@ -335,5 +335,6 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     undo,
     setColor: (color: string) =>
       setDrawingSettings((prev) => ({ ...prev, color })),
+    updateCanvasSize: updateCanvasSizeCallback,
   };
 }
