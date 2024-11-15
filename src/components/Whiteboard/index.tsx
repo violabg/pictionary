@@ -1,6 +1,6 @@
 "use client";
 
-import { isDrawerAtom } from "@/atoms";
+import { isDrawerAtom, showDrawingToolsAtom } from "@/atoms";
 import { Section } from "@/components/ui/Section";
 import { useCanvas } from "@/hooks/useCanvas";
 import { DrawingSettings } from "@/types";
@@ -12,6 +12,7 @@ import { DrawingToolbar } from "../DrawingToolbar";
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawer = useAtomValue(isDrawerAtom);
+  const showDrawingTools = useAtomValue(showDrawingToolsAtom);
 
   const {
     currentSize,
@@ -46,10 +47,10 @@ export default function Whiteboard() {
 
   return (
     <>
-      {isDrawer && (
+      {showDrawingTools && (
         <Section
           as="header"
-          className="flex items-center gap-2 [grid-area:header] col-span-2"
+          className="flex items-center gap-2 [grid-area:header]"
         >
           <DrawingToolbar
             canUndo={history.length > 1}

@@ -1,16 +1,16 @@
 import {
   clearCanvasAtom,
   currentPlayerAtom,
-  DEFAULT_ROUND_DURATION,
   gameStateAtom,
-  getInitialState,
   isLoadingAtom,
   loadingAtom,
   playersAtom,
 } from "@/atoms";
 import {
   calculateScore,
+  DEFAULT_ROUND_DURATION,
   fetchTopics,
+  getInitialState,
   getOrCreateGameState,
   getRandomTopic,
   GUESS_POINTS,

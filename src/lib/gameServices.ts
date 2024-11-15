@@ -3,9 +3,22 @@
 import { supabase } from "@/lib/supabaseClient";
 import { GameState, GameStateRemote, Topic } from "@/types";
 
-export const POINTS_MULTIPLIER = 20;
-export const MIN_PLAYERS = 2;
+export const DEFAULT_ROUND_DURATION = 150;
 export const GUESS_POINTS = 5;
+export const MIN_PLAYERS = 2;
+export const POINTS_MULTIPLIER = 20;
+
+// Initial State
+export const getInitialState = (roundDuration: number): GameState => ({
+  status: "idle",
+  currentDrawer: null,
+  nextDrawer: null,
+  playedRounds: 0,
+  currentRoundDuration: roundDuration,
+  timeLeft: roundDuration,
+  currentTopic: null,
+  pastTopics: [],
+});
 
 export const getRandomTopic = (
   topics: Topic[],
