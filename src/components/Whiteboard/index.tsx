@@ -3,6 +3,7 @@
 import { isDrawerAtom } from "@/atoms";
 import { Section } from "@/components/ui/Section";
 import { useCanvas } from "@/hooks/useCanvas";
+import { DrawingSettings } from "@/types";
 import { useAtomValue } from "jotai";
 import { useRef } from "react";
 import Canvas from "../Canvas";
@@ -17,6 +18,7 @@ export default function Whiteboard() {
     isErasing,
     history,
     draw,
+    setColor,
     setCurrentSize,
     setIsErasing,
     startDrawing,
@@ -26,14 +28,13 @@ export default function Whiteboard() {
   } = useCanvas(canvasRef);
 
   const handleToolChange = ({
+    color,
     isErasing: newIsErasing,
     size,
-  }: {
-    isErasing: boolean;
-    size: number;
-  }) => {
-    setIsErasing(newIsErasing);
+  }: DrawingSettings) => {
+    setColor(color);
     setCurrentSize(size);
+    setIsErasing(newIsErasing);
   };
 
   const _onStartDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {

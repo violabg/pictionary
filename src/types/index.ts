@@ -1,6 +1,7 @@
 export type DrawingData = {
   x: number;
   y: number;
+  color: string;
   isDrawing: boolean;
   isErasing: boolean;
   lineSize: number;
@@ -8,14 +9,10 @@ export type DrawingData = {
   sourceHeight: number;
 };
 
-export type DrawingTools = {
-  isErasing: boolean;
-  size: number;
-};
-
 export type DrawingSettings = {
-  size: number;
+  color: string;
   isErasing: boolean;
+  size: number;
 };
 
 export type CanvasOperation = {

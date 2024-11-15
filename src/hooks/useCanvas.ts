@@ -26,6 +26,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   const [drawingSettings, setDrawingSettings] = useState<DrawingSettings>({
     size: 2,
     isErasing: false,
+    color: "#000000",
   });
 
   // Maintain canvas state history for undo operations
@@ -83,7 +84,9 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
           ctx.globalCompositeOperation = drawingData.isErasing
             ? "destination-out"
             : "source-over";
-          ctx.strokeStyle = "#000000";
+          ctx.strokeStyle = drawingData.isErasing
+            ? "#000000"
+            : drawingData.color;
           ctx.lineWidth = lineWidth;
 
           if (!drawingData.isDrawing) {
@@ -129,6 +132,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
         isDrawing: !isStarting,
         isErasing: drawingSettings.isErasing,
         lineSize: drawingSettings.size,
+        color: drawingSettings.color,
         sourceWidth: canvas.width,
         sourceHeight: canvas.height,
       });
@@ -330,5 +334,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     startDrawing,
     stopDrawing,
     undo,
+    setColor: (color: string) =>
+      setDrawingSettings((prev) => ({ ...prev, color })),
   };
 }

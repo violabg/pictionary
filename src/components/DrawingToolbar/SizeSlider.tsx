@@ -10,7 +10,7 @@ type Props = {
 export function SizeSlider({ value, min, max, onChange }: Props) {
   return (
     <Slider
-      className="w-20"
+      className="w-full"
       value={[value]}
       min={min}
       max={max}
