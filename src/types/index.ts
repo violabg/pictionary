@@ -28,11 +28,9 @@ export type Player = {
 
 export type GameStatus =
   | "idle"
-  | "active"
   | "drawing"
   | "waitingForWinner"
   | "showTopic"
-  | "paused"
   | "over";
 
 export type GameStateRemote = {
