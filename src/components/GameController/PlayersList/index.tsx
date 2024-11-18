@@ -1,7 +1,6 @@
 import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
 import { Card } from "@/components/ui/card";
-import { getOrCreatePlayer } from "@/lib/playerService";
-import { supabase } from "@/lib/supabaseClient";
+import { deletePlayer, getOrCreatePlayer } from "@/lib/playerService";
 import { useAtom, useAtomValue } from "jotai";
 import { Loader, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
@@ -22,7 +21,7 @@ export function PlayersList() {
 
   const handleDeletePlayer = async (playerId: string) => {
     setDeletingPlayerId(playerId);
-    await supabase.from("players").delete().eq("id", playerId);
+    await deletePlayer(playerId);
     setPlayers((current) => current.filter((p) => p.id !== playerId));
     setDeletingPlayerId(null);
   };

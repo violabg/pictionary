@@ -18,6 +18,7 @@ import {
   updateGame,
 } from "@/lib/gameServices";
 import {
+  fetchPlayers,
   getPlayerById,
   resetPlayerScores,
   selectNextDrawer,
@@ -249,19 +250,9 @@ export function useGameState() {
    */
   useEffect(() => {
     const getPlayers = async () => {
-      const { data } = await supabase.from("players").select("*");
+      const players = await fetchPlayers();
 
-      if (data) {
-        const players = data.map((p) => ({
-          id: p.id,
-          name: p.name,
-          score: 0,
-          hasPlayed: false,
-        }));
-        setPlayers(players);
-      } else {
-        setPlayers([]);
-      }
+      setPlayers(players);
       setLoading((l) => ({ ...l, players: false }));
     };
     if (loading.players) {
