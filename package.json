@@ -17,6 +17,7 @@
     "@radix-ui/react-radio-group": "^1.2.1",
     "@radix-ui/react-slider": "^1.2.1",
     "@radix-ui/react-slot": "^1.1.0",
+    "@statelyai/inspect": "^0.4.0",
     "@supabase/supabase-js": "^2.46.1",
     "@xstate/react": "^5.0.0",
     "class-variance-authority": "^0.7.0",

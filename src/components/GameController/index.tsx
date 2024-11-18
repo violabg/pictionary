@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { Section } from "@/components/ui/Section";
-import { useGameState } from "@/hooks/useGameState";
+import { supabase } from "@/lib/supabaseClient";
+import { gameMachine } from "@/machines/gameMachine";
+import { Player } from "@/types";
+import { useMachine } from "@xstate/react";
 import { useAtomValue } from "jotai";
 import { Clock, Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { GameOver } from "./GameOver";
 import PlayersList from "./PlayersList";
@@ -17,20 +20,53 @@ import { TopicCard } from "./TopicCard";
 import { WinnerDialog } from "./WinnerDialog";
 
 export function GameController() {
-  const {
-    isLoading,
-    gameState,
-    players,
-    topic,
-    startGame,
-    startDrawing,
-    endDrawing,
-    setTimer,
-    newGame,
-    handleWinnerSelection,
-  } = useGameState();
+  const [state, send] = useMachine(gameMachine);
+  const { gameState, players, isLoading: loading, topics } = state.context;
+  const isLoading =
+    state.matches("loading") || Object.values(loading).some(Boolean);
+
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
+
   const isDrawer = useAtomValue(isDrawerAtom);
+  const topic = topics.find((t) => t.id === gameState.currentTopic);
+
+  const onSetTimer = (seconds: number) => {
+    console.log("🚀 ~ onSetTimer ~ seconds:", seconds);
+    send({ type: "SET_TIMER", seconds });
+  };
+
+  /**
+   * Effect hook for getting players from the database and setting up real-time subscriptions
+   */
+  useEffect(() => {
+    // Real-time subscription
+    const playersSubscription = supabase
+      .channel("players_channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "players",
+        },
+        (payload) => {
+          console.log("payload :>> ", payload);
+          send({
+            type: "SYNC_PLAYER",
+            data: {
+              eventType: payload.eventType,
+              newPlayer: payload.new as Player,
+              oldPlayer: payload.old as Player,
+            },
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(playersSubscription);
+    };
+  }, [send]);
 
   return (
     <Section
@@ -51,7 +87,10 @@ export function GameController() {
                 <Clock className="mr-2 w-4 h-4" />
                 {`Change current time ${gameState.currentRoundDuration}s`}
               </Button>
-              <Button disabled={players.length < 2} onClick={startGame}>
+              <Button
+                disabled={players.length < 2}
+                onClick={() => send({ type: "START_GAME" })}
+              >
                 <Play />
                 Start Game
               </Button>
@@ -77,7 +116,9 @@ export function GameController() {
           {gameState.status === "showTopic" && isDrawer && topic && (
             <>
               <TopicCard topic={topic} />
-              <Button onClick={startDrawing}>Start Drawing</Button>
+              <Button onClick={() => send({ type: "START_DRAWING" })}>
+                Start Drawing
+              </Button>
             </>
           )}
 
@@ -87,7 +128,9 @@ export function GameController() {
               <TimerWithButton
                 gameState={gameState}
                 isDrawer={isDrawer}
-                onTimeUp={endDrawing}
+                onTimeUp={(timeLeft: number) =>
+                  send({ type: "END_DRAWING", timeLeft })
+                }
               />
             </>
           )}
@@ -98,9 +141,9 @@ export function GameController() {
               players={players}
               currentDrawer={gameState.currentDrawer}
               topic={topic}
-              onSelectWinner={async (winnerId) => {
-                await handleWinnerSelection(winnerId);
-              }}
+              onSelectWinner={(winnerId: string) =>
+                send({ type: "SELECT_WINNER", winnerId })
+              }
             />
           )}
 
@@ -109,14 +152,14 @@ export function GameController() {
           ) : (
             <GameOver
               players={[...players].sort((a, b) => b.score - a.score)}
-              onNewGame={newGame}
+              onNewGame={() => send({ type: "NEW_GAME" })}
             />
           )}
 
           <TimerSettings
             open={isTimerSettingsOpen}
             onOpenChange={setIsTimerSettingsOpen}
-            onSetTimer={setTimer}
+            onSetTimer={onSetTimer}
             currentTime={gameState.currentRoundDuration}
           />
         </>

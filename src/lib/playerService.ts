@@ -1,6 +1,21 @@
 import { Player } from "@/types";
 import { supabase } from "./supabaseClient";
 
+export const fetchPlayers = async () => {
+  const { data } = await supabase.from("players").select("*");
+  let players: Player[] = [];
+
+  if (data) {
+    players = data.map((p) => ({
+      id: p.id,
+      name: p.name,
+      score: 0,
+      hasPlayed: false,
+    }));
+  }
+  return players;
+};
+
 export const checkPlayerExists = async (name: string) => {
   const { data, error } = await supabase
     .from("players")
@@ -19,6 +34,12 @@ export const createPlayer = async (name: string) => {
     .single();
 
   return { player: data as Player, error };
+};
+
+export const deletePlayer = async (playerId: string) => {
+  const { error } = await supabase.from("players").delete().eq("id", playerId);
+
+  return error;
 };
 
 export const resetPlayerScores = async () => {

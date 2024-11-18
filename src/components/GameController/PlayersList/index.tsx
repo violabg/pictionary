@@ -1,30 +1,21 @@
-import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
 import { Card } from "@/components/ui/card";
-import { getOrCreatePlayer } from "@/lib/playerService";
-import { supabase } from "@/lib/supabaseClient";
-import { useAtom, useAtomValue } from "jotai";
+import { gameMachine } from "@/machines/gameMachine";
+import { useMachine } from "@xstate/react";
 import { Loader, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { AddPlayerDialog } from "../AddPlayerDialog";
 
 export function PlayersList() {
-  const gameState = useAtomValue(gameStateAtom);
-  const [players, setPlayers] = useAtom(playersAtom);
-  const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
+  const [state, send] = useMachine(gameMachine);
+  const { gameState, players, currentPlayer, playerIdToDelete } = state.context;
   const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
-  const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
-
   const handleAddPlayer = async (name: string) => {
-    const { player } = await getOrCreatePlayer(name);
-    setCurrentPlayer(player);
+    send({ type: "ADD_PLAYER", name });
     setShowAuthDialog(false);
   };
-
-  const handleDeletePlayer = async (playerId: string) => {
-    setDeletingPlayerId(playerId);
-    await supabase.from("players").delete().eq("id", playerId);
-    setPlayers((current) => current.filter((p) => p.id !== playerId));
-    setDeletingPlayerId(null);
+  console.log("state.context :>> ", state.context);
+  const handleDeletePlayer = async (id: string) => {
+    send({ type: "DELETE_PLAYER", id });
   };
 
   return (
@@ -54,9 +45,9 @@ export function PlayersList() {
               <button
                 className="ml-auto"
                 onClick={() => handleDeletePlayer(player.id)}
-                disabled={deletingPlayerId === player.id}
+                disabled={playerIdToDelete === player.id}
               >
-                {deletingPlayerId === player.id ? (
+                {playerIdToDelete === player.id ? (
                   <Loader className="w-5 h-5 text-red-500 animate-spin" />
                 ) : (
                   <Trash className="w-5 h-5 text-red-500" />
