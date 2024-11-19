@@ -35,12 +35,7 @@ type GameContext = {
   playerIdToDelete?: string;
   topics: Topic[];
   currentTopic?: Topic;
-  isLoading: {
-    players: boolean;
-    game: boolean;
-    topics: boolean;
-  };
-  loadingState: "loading" | "deletingPlayer" | "addingPlayer" | "idle";
+  loadingState: "loadingData" | "deletingPlayer" | "addingPlayer" | "idle";
 };
 
 // Events that can occur in the game
@@ -243,7 +238,7 @@ export const gameMachine = setup({
       game: true,
       topics: true,
     },
-    loadingState: "idle",
+    loadingState: "loadingData",
   },
   on: {
     SYNC_PLAYER: ".syncPlayer",
@@ -258,11 +253,7 @@ export const gameMachine = setup({
             gameState: ({ event }) => event.output.gameState,
             players: ({ event }) => event.output.players,
             topics: ({ event }) => event.output.topics,
-            isLoading: () => ({
-              players: false,
-              game: false,
-              topics: false,
-            }),
+            loadingState: "idle",
           }),
         },
       },

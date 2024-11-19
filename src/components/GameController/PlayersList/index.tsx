@@ -6,8 +6,18 @@ import { AddPlayerDialog } from "../AddPlayerDialog";
 
 export function PlayersList() {
   const { send } = GameMachineContext.useActorRef();
-  const state = GameMachineContext.useSelector((state) => state);
-  const { gameState, players, currentPlayer, playerIdToDelete } = state.context;
+  const gameState = GameMachineContext.useSelector(
+    (state) => state.context.gameState
+  );
+  const players = GameMachineContext.useSelector(
+    (state) => state.context.players
+  );
+  const currentPlayer = GameMachineContext.useSelector(
+    (state) => state.context.currentPlayer
+  );
+  const playerIdToDelete = GameMachineContext.useSelector(
+    (state) => state.context.playerIdToDelete
+  );
   const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
 
   const handleAddPlayer = async (name: string) => {

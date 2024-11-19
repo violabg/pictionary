@@ -19,11 +19,20 @@ import { WinnerDialog } from "./WinnerDialog";
 
 export function GameController() {
   const { send } = GameMachineContext.useActorRef();
-  const state = GameMachineContext.useSelector((state) => state);
-  const { gameState, players, isLoading: loading, topics } = state.context;
+  const gameState = GameMachineContext.useSelector(
+    (state) => state.context.gameState
+  );
+  const players = GameMachineContext.useSelector(
+    (state) => state.context.players
+  );
+  const loadingState = GameMachineContext.useSelector(
+    (state) => state.context.loadingState
+  );
+  const topics = GameMachineContext.useSelector(
+    (state) => state.context.topics
+  );
 
-  const isLoading =
-    state.matches("loading") || Object.values(loading).some(Boolean);
+  const isLoading = loadingState === "loadingData";
 
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
 
