@@ -7,16 +7,18 @@ import {
   getOrCreateGameState,
   getRandomTopic,
   GUESS_POINTS,
+  updateGame,
 } from "@/lib/gameServices";
 import {
   deletePlayer,
   fetchPlayers,
   getOrCreatePlayer,
+  getPlayerById,
   resetPlayerScores,
   selectNextDrawer,
   updatePlayerScore,
 } from "@/lib/playerService";
-import { GameState, Player, Topic } from "@/types";
+import { GameState, GameStateRemote, Player, Topic } from "@/types";
 import { assign, fromPromise, setup } from "xstate";
 
 import { createBrowserInspector } from "@statelyai/inspect";
@@ -51,6 +53,14 @@ type SyncPlayerEvent = {
     oldPlayer: Player;
   };
 };
+type SyncGameStateEvent = {
+  type: "SYNC_GAME_STATE";
+  data: {
+    eventType: DbEvent;
+    newState: GameStateRemote;
+    oldState: GameStateRemote;
+  };
+};
 type StartGameEvent = { type: "START_GAME" };
 type StartDrawingEvent = { type: "START_DRAWING" };
 type EndDrawingEvent = { type: "END_DRAWING"; timeLeft: number };
@@ -63,6 +73,7 @@ type GameEvent =
   | AddPlayerEvent
   | DeletePlayerEvent
   | SyncPlayerEvent
+  | SyncGameStateEvent
   | StartGameEvent
   | StartDrawingEvent
   | EndDrawingEvent
@@ -77,6 +88,8 @@ type LoadDataResult = {
   topics: Topic[];
 };
 
+export const gameId = "spindox";
+
 export const gameMachine = setup({
   types: {} as {
     context: GameContext;
@@ -84,7 +97,6 @@ export const gameMachine = setup({
   },
   actors: {
     loadInitialData: fromPromise(async (): Promise<LoadDataResult> => {
-      const gameId = "spindox";
       const [gameState, playersData, topicsData] = await Promise.all([
         getOrCreateGameState(gameId, getInitialState(DEFAULT_ROUND_DURATION)),
         fetchPlayers(),
@@ -109,6 +121,15 @@ export const gameMachine = setup({
         return input;
       }
     ),
+    syncGameState: fromPromise<SyncGameStateEvent, SyncGameStateEvent>(
+      async ({ input }) => {
+        return input;
+      }
+    ),
+    updateGameState: fromPromise<GameState, GameState>(async ({ input }) => {
+      await updateGame(gameId, input);
+      return input;
+    }),
   },
   actions: {
     startGame: assign({
@@ -225,7 +246,7 @@ export const gameMachine = setup({
     }),
   },
 }).createMachine({
-  /** @xstate-layout N4IgpgJg5mDOIC5RQIYFswGIDKBNAcgMID6ACgDICCuAogEoDaADALqKgAOA9rAJYAuvLgDt2IAB6IAtAEYAzAFYAdAA4VCgCwAmGUy1aAbBoDsCgwBoQAT2kyZGpfL12AnC5kutcrQF8fl1AwlABsuFAheYShMCBEwJUiANy4Aa3jA+NDwyKgEJK4AYxRBEWYWMrFuPhLRJAlbJjklJmMVGU0NdRUXJgMVSxsEeSamdzs+mWMNFwMWvwD0ePCIqNJglCswACdMSgARPbIqWkZWSp4BIVrQSQQpHsczLRM1TxcNOQtrRDkNA0cVKYDAoZICtN1jPMQBklMs1httjE4glhMk0koYXD1pstnlUYVilcyhU6lVLiIxLd5C4lAZjHJ7AotL0DB5PANEJ0ZI9dApjKMmHyegYoTDYFZhAV4TikcJ4vl0WKJVLsds8ckijViWdSRcapTEM8moC7Ex2nSFG53hy7jItMYlL85KYNEwVDoDH0NKLFgkIMEsHsaOQaAAVGhHaj0EmcPVXA0IDSgxyuvme7wKM39b4IGmKFzOhRyJglwzGSH+aG+3j+rDYUOUOih4gAcUoAFkaDGQGT9XVbqyHcW-gonlM5DbvA4dLozS53So9C4fUEawGcGHiKGAJKd05sXXVeP9xCaGmzwwlnpFhk20FMVRyFQGcGL8Gjzor+IQMABwSrVUdliOUUTRdJfR-P8cmlNV8k1IlWG7XtjxuQ05BpXotEzYx0w0TQJxzZ4H3Q7xGktQVFEFL8lFgAALLgAHdQy4DheAKHAGybYg9joSgAHVt3wFskLjCkTwQd0aS0GZhRcYwsMzFwbQ+ZQix6X4kw+XpqIgLYUAYnJMBofBDh4-jBOEnVYyPMTUKGGQDCaK1510dDM00ZTFCUNTGg0TTixFSsYQYlBLiiAAxLgtj4yI5R2bBgxoQhmwE-B8GjKye1E656nskElHcYx5wolwFHUDQbSMB1LWdRo3H5ExvSC30ClosAChSFtFmwfhigAV1gTARJsnLbiBZoWndAwxneAjBjpLRVGZZkcPtQVQWo1r2s67rev4AahpkA9rPJUbEEc-5OndS0+Qc+ktBtUdFrpPy3EmhbqK4RJEXSvjWw7LtMuQ2zcr8-5Zk0HRpOmVps0GYx2kcSZxnpN0iqaythC4H94DqDJzhGhNZBUY1yp0PRDBMMwbSkfRlCcHRXTsP41GorIVigAnTqJ8ZvILcs3A8dp5AqnNZEcTx+XpPkyLUPlqOWaDAK5vs7KkNpaXBAtM06Yt1Dmw1WVUaacLpVo3GdBWIAgGCthVlDcrtf52lMaT3jK9RLUnaalBMTw6c9ek-mo8VJVt+2QapZQZk6PzDEmaWWhp+QHUc5x7Tw5402otcwAjs7E3LZoUf0abppLBRJz+AEgRBMEIR038wH-KBw8PbnxLp7yWfdLw52dO9eiUN3OiwqYvGeFQQ-opiWLY-OE09Z6iqMUZtD8pllLK7z2jK0x3A+EnAoWIJdP0nIF-E1zwcBEEN78ySt5UHfR1vg+n0+aiQrCqBIui2LtiXzsuMBwrRFJUznI5R69JfZml0PeaS3g5CbTah1LqGAer9VxidVWuUIQTVaHaSuOY6QPhlh6FSrJGifW+nbduuCxpFxJsyTQFczCshtPSZ+oxCzyHUO0OYfgfBAA */
+  /** @xstate-layout N4IgpgJg5mDOIC5RQIYFswGIDKBNAcgMID6ACgDICCuAogEoDaADALqKgAOA9rAJYAuvLgDt2IAB6IAtAEYAzAFYAdAA4VCgCwAmGUy1aAbBoDsCgwBoQAT2kyZGpfL12AnC5kutcrQF8fl1AwcAhIAcUoAWRpibAAVSliaZjYkEG4+QRExSQQNE1UVYxNvBVMmXTlLGwRZe0c5ZxkDLRdnfT8A9DAlABsuFAheYShMCBFuoYA3LgBrbsDuvoGhqAQprgBjFEzhZOSxdIEhUVSc2SY5JSZjFRlNDXUVVoMVKsR5S6Z3OxeZIpcDNcOiAFkoBoNhqQeigrGAAE6YSgAESRZCotEYrAOPCOWVO0lajjMWhMak8Lg0cgs1kQcg0BkchTMChkhS0T2MwNB4KhMPho3GSnWcyU3IgEF5sLha2E0y2Oz2WNShx22XechcSgMxjk9gUWiYBgMHk8b1ytyJulKXyYpWeXK6SlgVmEG0l-LGwgmstm80dztd7ul63lx0VKU4ONV+IQJMuhTs5TMpjcFLNsi0xiUdLkpg0TBUOiNKg0DowTpdG1CXWw-G2WE93umItBAarNbr-DAMrl2zDrH2yqjxzVCE8lwpOs8RWMRhcxnT8gZxqY+YpT31GgUcjLEwgPSwSJo5BoiTR1Hog8jGRHMY0rMc+dKRpK5VeNLH2YULlz26Y-8MYxOX8EFHV4fcsDiSg6FiYhwiiK80mHPFQByY0swaekFGJIpKg-bwHB0XRyhcQsVD0FxdyFCCcFPYhYgASSiTEIyQm8UIkRBNE1YjDH-Vpt11M1WSYVQ5BUZo1D0dRNBUKiIDAA9BEhaEpQFL0hR9FtHQUpSViDHtNj7ERw2xdiTlQxAvE1Q0tAUa4Xy3SkzRJUSNW8C5v1tRRbSo2AAAsuAAd1iLgOF4DYcHiGDiCROhKAAdQY-BQkQlVb0shBC01FoDGeec7PslwzUpZRt1aOl70pQ15LhFAgpWTAaHwVE4sS5LUqVa9cQsziEB+CdU1uC4XHszQSsUJRyouPJ7AaAwqKClAjmGAAxLg4QSoYvQRbBjxoQhYKS-B8EvLq2J60c7BZJR3GMUjvNG9QNDNIws2-XMRvnVciiojZ-LADYZmrDBa22ABXWBMDS5DepyUwGX-G5DG+Ck8OqbUtFUA0DVnTNbVZP6AaBkGwDB-hIehmRWPSji0KpJQHkLb9SiaHUtDNbCse1PI3GuCTjF8EDQS4SZ+VOhK4MiJJztpuHEDyZdbW0GQWg0ec1DNYw7kcP4fh1At7tLYFhC4BT4FSBYzMumNZBUeNnp0PRDBMMx0y8LNKSNzRMz11WqKWCEoGt6NMtqBkPqAtwPDueQXo-WRHGna5FGMTy1FKKjwX01T4RDjK+qkC1JJ-eyHgadR0as41VDy2dtRuNxcyz8Ug3zun3kMIlTBaCkFAz78zSpTUTE8fQzG1OkFuF-1KzbodzKu5QAQePJDD+HV7IXBP5CzAwGh0TMtxJZ8-MrUnybAdv5YQbUVCUQW3G3NPbmJRd1du3NxxLDcPAUKjwIHmvqOEwWZyhs30HlPK-4FBD3pIyBGLI2QcnkopMAykoDz26qHPq48pr0jUPoBoHhczCUNEoXuDw7JFC8CSOSM9ywBWCqFcKGxgExiNNze6RgvjaDyPqEq-cpp3H7imOa9tp6dHLBAOqDVhjsMyhUZcTJ7BOSocVD8W574smwkydwlIJGLWWhg9am1tp5wXjbRRTQHA3CKq7Ei+9OY6kZuAt8FFvA7gYd0f6gNgYdghhbbBBccgciuPzVWsCPzalEtaIspUVxeKkd0UWFjgkdwQEBLM9sDSaBgRPGQWtxJXB-KYeQ6g7hAj8D4IAA */
 
   id: "game",
   initial: "loading",
@@ -233,15 +254,11 @@ export const gameMachine = setup({
     gameState: getInitialState(DEFAULT_ROUND_DURATION),
     players: [],
     topics: [],
-    isLoading: {
-      players: true,
-      game: true,
-      topics: true,
-    },
     loadingState: "loadingData",
   },
   on: {
     SYNC_PLAYER: ".syncPlayer",
+    SYNC_GAME_STATE: ".syncGameState",
   },
   states: {
     loading: {
@@ -303,6 +320,43 @@ export const gameMachine = setup({
         },
       },
     },
+    syncGameState: {
+      invoke: {
+        src: "syncGameState",
+        input: ({ event }) => event as SyncGameStateEvent,
+        onDone: {
+          actions: assign({
+            gameState: ({ context, event }) => {
+              const payload = event.output;
+              const { eventType, newState } = payload.data;
+
+              if (eventType === "INSERT" || eventType === "UPDATE") {
+                const {
+                  currentDrawer: _currentDrawer,
+                  nextDrawer: _nextDrawer,
+                  ...rest
+                } = newState;
+
+                const nextDrawer = getPlayerById(
+                  context.players,
+                  _nextDrawer ?? ""
+                );
+                const currentDrawer = getPlayerById(
+                  context.players,
+                  _currentDrawer ?? ""
+                );
+                return {
+                  ...rest,
+                  currentDrawer,
+                  nextDrawer,
+                };
+              }
+              return context.gameState;
+            },
+          }),
+        },
+      },
+    },
     idle: {
       on: {
         DELETE_PLAYER: {
@@ -329,10 +383,6 @@ export const gameMachine = setup({
         onDone: {
           target: "idle",
           actions: assign({
-            // players: ({ context }) =>
-            //   context.players.filter(
-            //     (player) => player.id !== context.playerIdToDelete
-            //   ),
             playerIdToDelete: undefined,
             loadingState: "idle",
           }),

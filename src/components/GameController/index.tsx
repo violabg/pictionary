@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { Section } from "@/components/ui/Section";
 import { supabase } from "@/lib/supabaseClient";
-import GameMachineContext from "@/machines/gameMachine";
-import { Player } from "@/types";
+import GameMachineContext, { gameId } from "@/machines/gameMachine";
+import { GameStateRemote, Player } from "@/types";
 import { useAtomValue } from "jotai";
 import { Clock, Play } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -58,7 +58,6 @@ export function GameController() {
           table: "players",
         },
         (payload) => {
-          console.log("payload :>> ", payload);
           send({
             type: "SYNC_PLAYER",
             data: {
@@ -71,8 +70,34 @@ export function GameController() {
       )
       .subscribe();
 
+    // Set up real-time subscription to game state changes
+    const gameSubscription = supabase
+      .channel("games")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "games",
+          filter: `room_id=eq.${gameId}`,
+        },
+        (payload) => {
+          console.log("payload :>> ", payload);
+          send({
+            type: "SYNC_GAME_STATE",
+            data: {
+              eventType: payload.eventType,
+              newState: payload.new as GameStateRemote,
+              oldState: payload.old as GameStateRemote,
+            },
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(playersSubscription);
+      supabase.removeChannel(gameSubscription);
     };
   }, [send]);
 
