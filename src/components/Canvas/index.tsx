@@ -8,8 +8,8 @@ type Props = {
   isErasing: boolean;
   currentSize: number;
   canvasRef: React.RefObject<HTMLCanvasElement>;
-  onDraw: (e: React.MouseEvent<HTMLCanvasElement>) => void;
-  onStartDrawing: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+  onDraw: (e: React.PointerEvent<HTMLCanvasElement>) => void;
+  onStartDrawing: (e: React.PointerEvent<HTMLCanvasElement>) => void;
   onStopDrawing: () => void;
 };
 
@@ -27,7 +27,7 @@ const Canvas: React.FC<Props> = ({
 
   const drawingEnabled = gameState?.status === "drawing";
 
-  const updateCursor = (e: React.MouseEvent) => {
+  const updateCursor = (e: React.PointerEvent) => {
     if (cursorRef.current) {
       setCursorPosition({
         x: e.clientX,
@@ -36,12 +36,12 @@ const Canvas: React.FC<Props> = ({
     }
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     updateCursor(e);
     onStartDrawing(e);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     updateCursor(e);
     onDraw(e);
   };
@@ -59,11 +59,12 @@ const Canvas: React.FC<Props> = ({
             ref={canvasRef}
             className={`w-full h-full bg-white rounded-lg ${
               isErasing ? "cursor-none" : "cursor-crosshair"
-            } ${!drawingEnabled ? "pointer-events-none" : ""}`}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
+            } ${!drawingEnabled ? "pointer-events-none" : "touch-none"}`}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerLeave={stopDrawing}
+            style={{ touchAction: "none" }} // Prevent scrolling while drawing
           />
           {!drawingEnabled && (
             <Section className="absolute inset-0 flex justify-center items-center opacity-95">

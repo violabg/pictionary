@@ -115,11 +115,11 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   );
 
   /**
-   * Processes mouse events for drawing
-   * Converts mouse coordinates to canvas coordinates and initiates drawing
+   * Processes pointer events for drawing
+   * Converts pointer coordinates to canvas coordinates and initiates drawing
    */
-  const handleMouseEvent = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>, isStarting = false) => {
+  const handlePointerEvent = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>, isStarting = false) => {
       if (!canvas || (!isDrawing && !isStarting)) return;
 
       const rect = canvas.getBoundingClientRect();
@@ -161,18 +161,18 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
    * stopDrawing: Ends drawing and saves state
    */
   const startDrawing = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      handleMouseEvent(e, true);
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      handlePointerEvent(e, true);
       setIsDrawing(true);
     },
-    [handleMouseEvent]
+    [handlePointerEvent]
   );
 
   const draw = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      handleMouseEvent(e);
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      handlePointerEvent(e);
     },
-    [handleMouseEvent]
+    [handlePointerEvent]
   );
 
   const stopDrawing = useCallback(() => {
