@@ -2,20 +2,7 @@ import { DEFAULT_ROUND_DURATION, getInitialState } from "@/lib/gameServices";
 import { GameState, Player } from "@/types";
 import { atom } from "jotai";
 
-export const loadingAtom = atom<{
-  players: boolean;
-  game: boolean;
-  topics: boolean;
-}>({
-  players: true,
-  game: true,
-  topics: true,
-});
-
-export const isLoadingAtom = atom((get) => {
-  const loading = get(loadingAtom);
-  return loading.players || loading.game || loading.topics;
-});
+export const isLoadingAtom = atom(true);
 
 export const playersAtom = atom<Player[]>([]);
 export const currentPlayerAtom = atom<Player>();

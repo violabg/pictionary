@@ -3,7 +3,6 @@ import {
   currentPlayerAtom,
   gameStateAtom,
   isLoadingAtom,
-  loadingAtom,
   playersAtom,
 } from "@/atoms";
 import {
@@ -36,8 +35,7 @@ const gameId = "spindox";
  * Handles real-time game state updates, player management, and game flow
  */
 export function useGameState() {
-  const [loading, setLoading] = useAtom(loadingAtom);
-  const isLoading = useAtomValue(isLoadingAtom);
+  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
   // State management atoms and local state
   const [gameState, setGameState] = useAtom(gameStateAtom);
 
@@ -187,25 +185,33 @@ export function useGameState() {
       currentRoundDuration: seconds,
     });
   };
+
   /**
-   * Effect hook for initializing game state and setting up real-time subscriptions
-   * Handles initial game state creation and updates from Supabase
+   * Fetches the initial game state, players, and topics
    */
   useEffect(() => {
-    const getGameState = async () => {
-      const data = await getOrCreateGameState(
-        gameId,
-        getInitialState(DEFAULT_ROUND_DURATION)
-      );
-      setGameState(data);
-      setLoading((l) => ({ ...l, game: false }));
+    const initServices = async () => {
+      const [gameState, playersData, topicsData] = await Promise.all([
+        getOrCreateGameState(gameId, getInitialState(DEFAULT_ROUND_DURATION)),
+        fetchPlayers(),
+        fetchTopics(),
+      ]);
+
+      setGameState(gameState);
+      setPlayers(playersData);
+      setTopics(topicsData);
+      setIsLoading(false);
     };
 
-    // Initialize game state if loading
-    if (loading.game) {
-      getGameState();
+    if (isLoading) {
+      initServices();
     }
+  }, [isLoading, setGameState, setPlayers, setIsLoading]);
 
+  /**
+   * Handles Supabase real-time subscriptions for game state and player updates
+   */
+  useEffect(() => {
     // Set up real-time subscription to game state changes
     const gameSubscription = supabase
       .channel("games")
@@ -240,25 +246,6 @@ export function useGameState() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(gameSubscription);
-    };
-  }, [loading.game, players, setGameState, setLoading]);
-
-  /**
-   * Effect hook for getting players from the database and setting up real-time subscriptions
-   */
-  useEffect(() => {
-    const getPlayers = async () => {
-      const players = await fetchPlayers();
-
-      setPlayers(players);
-      setLoading((l) => ({ ...l, players: false }));
-    };
-    if (loading.players) {
-      getPlayers();
-    }
-
     // Real-time subscription
     const playersSubscription = supabase
       .channel("players_channel")
@@ -288,24 +275,10 @@ export function useGameState() {
       .subscribe();
 
     return () => {
+      supabase.removeChannel(gameSubscription);
       supabase.removeChannel(playersSubscription);
     };
-  }, [setPlayers, setLoading, loading.players]);
-
-  /**
-   * Fetches available topics from the database
-   */
-  useEffect(() => {
-    const initTopics = async () => {
-      const data = await fetchTopics();
-      setTopics(data);
-      setLoading((l) => ({ ...l, topics: false }));
-    };
-
-    if (loading.topics) {
-      initTopics();
-    }
-  }, [loading.topics, setLoading]);
+  }, [players, setGameState, setPlayers]);
 
   /**
    * Effect hook for updating current topic when it changes
