@@ -38,7 +38,7 @@ export default function Whiteboard() {
     setIsErasing(newIsErasing);
   };
 
-  const _onStartDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const _onStartDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isDrawer) startDrawing(e);
   };
   const _onStopDrawing = () => {
