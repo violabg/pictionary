@@ -3,6 +3,7 @@
 import { showDrawingToolsAtom } from "@/atoms";
 import { jotaiStore } from "@/atoms/store";
 import { GameController } from "@/components/GameController";
+import GameMachineContext from "@/machines/gameMachine";
 import { Provider, useAtomValue } from "jotai";
 import Whiteboard from "../Whiteboard";
 
@@ -26,7 +27,9 @@ function PictionaryContent() {
 export default function Pictionary() {
   return (
     <Provider store={jotaiStore}>
-      <PictionaryContent />
+      <GameMachineContext.Provider>
+        <PictionaryContent />
+      </GameMachineContext.Provider>
     </Provider>
   );
 }

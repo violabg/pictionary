@@ -1,19 +1,20 @@
 import { Card } from "@/components/ui/card";
-import { gameMachine } from "@/machines/gameMachine";
-import { useMachine } from "@xstate/react";
+import GameMachineContext from "@/machines/gameMachine";
 import { Loader, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { AddPlayerDialog } from "../AddPlayerDialog";
 
 export function PlayersList() {
-  const [state, send] = useMachine(gameMachine);
+  const { send } = GameMachineContext.useActorRef();
+  const state = GameMachineContext.useSelector((state) => state);
   const { gameState, players, currentPlayer, playerIdToDelete } = state.context;
   const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
+
   const handleAddPlayer = async (name: string) => {
     send({ type: "ADD_PLAYER", name });
     setShowAuthDialog(false);
   };
-  console.log("state.context :>> ", state.context);
+
   const handleDeletePlayer = async (id: string) => {
     send({ type: "DELETE_PLAYER", id });
   };

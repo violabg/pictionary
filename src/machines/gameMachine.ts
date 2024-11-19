@@ -20,6 +20,7 @@ import { GameState, Player, Topic } from "@/types";
 import { assign, fromPromise, setup } from "xstate";
 
 import { createBrowserInspector } from "@statelyai/inspect";
+import { createActorContext } from "@xstate/react";
 import { createActor } from "xstate";
 
 const inspector = createBrowserInspector();
@@ -167,14 +168,12 @@ export const gameMachine = setup({
     }),
     setTimer: assign({
       gameState: ({ context, event }) => {
-        console.log("event :>> ", event);
         if (event.type !== "SET_TIMER") return context.gameState;
         const state = {
           ...context.gameState,
           currentRoundDuration: event.seconds,
           timeLeft: event.seconds,
         };
-        console.log("setTimer state :>> ", state);
         return state;
       },
     }),
@@ -294,7 +293,6 @@ export const gameMachine = setup({
         onDone: {
           actions: assign({
             players: ({ context, event }) => {
-              console.log("event :>> ", event);
               let newPlayers: Player[] = [...context.players];
               const payload = event.output;
               const { eventType, newPlayer, oldPlayer } = payload.data;
@@ -308,7 +306,6 @@ export const gameMachine = setup({
                   p.id === newPlayer.id ? newPlayer : p
                 );
               }
-              console.log("newPlayers :>> ", newPlayers);
               return newPlayers;
             },
           }),
@@ -402,6 +399,8 @@ export const gameMachine = setup({
     },
   },
 });
+
+export default createActorContext(gameMachine);
 
 // ...
 const actor = createActor(gameMachine, {

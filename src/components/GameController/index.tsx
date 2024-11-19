@@ -1,14 +1,12 @@
 "use client";
-
 import { isDrawerAtom } from "@/atoms";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { Section } from "@/components/ui/Section";
 import { supabase } from "@/lib/supabaseClient";
-import { gameMachine } from "@/machines/gameMachine";
+import GameMachineContext from "@/machines/gameMachine";
 import { Player } from "@/types";
-import { useMachine } from "@xstate/react";
 import { useAtomValue } from "jotai";
 import { Clock, Play } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -20,8 +18,10 @@ import { TopicCard } from "./TopicCard";
 import { WinnerDialog } from "./WinnerDialog";
 
 export function GameController() {
-  const [state, send] = useMachine(gameMachine);
+  const { send } = GameMachineContext.useActorRef();
+  const state = GameMachineContext.useSelector((state) => state);
   const { gameState, players, isLoading: loading, topics } = state.context;
+
   const isLoading =
     state.matches("loading") || Object.values(loading).some(Boolean);
 
@@ -31,7 +31,6 @@ export function GameController() {
   const topic = topics.find((t) => t.id === gameState.currentTopic);
 
   const onSetTimer = (seconds: number) => {
-    console.log("🚀 ~ onSetTimer ~ seconds:", seconds);
     send({ type: "SET_TIMER", seconds });
   };
 
