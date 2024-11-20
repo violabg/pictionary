@@ -1,3 +1,4 @@
+import { convertRemoteToLocal } from "@/lib/gameServices";
 import { supabase } from "@/lib/supabaseClient";
 import { GameState, GameStateRemote, Player } from "@/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
@@ -11,18 +12,9 @@ export function useGameSync(
   const handleGameUpdate = useCallback(
     (payload: RealtimePostgresChangesPayload<GameStateRemote>) => {
       if (["INSERT", "UPDATE"].includes(payload.eventType)) {
-        const game = payload.new as GameStateRemote;
-        const {
-          currentDrawer: currentDrawerId,
-          nextDrawer: nextDrawerId,
-          ...rest
-        } = game;
-
-        onGameUpdate({
-          ...rest,
-          currentDrawer: getPlayerById(currentDrawerId),
-          nextDrawer: getPlayerById(nextDrawerId),
-        });
+        const remote = payload.new as GameStateRemote;
+        const local = convertRemoteToLocal(remote, getPlayerById);
+        onGameUpdate(local);
       }
     },
     [getPlayerById, onGameUpdate]
@@ -41,6 +33,9 @@ export function useGameSync(
         },
         handleGameUpdate
       )
+      // .on("system", { event: "*" }, (status) => {
+      //   console.log("status :>> ", status);
+      // })
       .subscribe();
 
     return () => {

@@ -1,4 +1,9 @@
-import { currentPlayerAtom, gameStateAtom, playersAtom } from "@/atoms";
+import {
+  currentPlayerAtom,
+  gameStateAtom,
+  loadingStatusAtom,
+  playersAtom,
+} from "@/atoms";
 import { Card } from "@/components/ui/card";
 import { deletePlayer, getOrCreatePlayer } from "@/lib/playerService";
 import { useAtom, useAtomValue } from "jotai";
@@ -9,13 +14,16 @@ import { AddPlayerDialog } from "../AddPlayerDialog";
 export function PlayersList() {
   const gameState = useAtomValue(gameStateAtom);
   const [players, setPlayers] = useAtom(playersAtom);
+  const [loadingStatus, setLoadingStatus] = useAtom(loadingStatusAtom);
   const [currentPlayer, setCurrentPlayer] = useAtom(currentPlayerAtom);
   const [showAuthDialog, setShowAuthDialog] = useState(!currentPlayer);
   const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
 
   const handleAddPlayer = async (name: string) => {
+    setLoadingStatus("addingPlayer");
     const { player } = await getOrCreatePlayer(name);
     setCurrentPlayer(player);
+    setLoadingStatus("idle");
     setShowAuthDialog(false);
   };
 
@@ -67,6 +75,7 @@ export function PlayersList() {
       })}
       {showAuthDialog && (
         <AddPlayerDialog
+          isLoading={loadingStatus === "addingPlayer"}
           open={true}
           onOpenChange={() => {}}
           onAddPlayer={handleAddPlayer}

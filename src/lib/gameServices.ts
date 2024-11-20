@@ -1,7 +1,7 @@
 // Constants
 
 import { supabase } from "@/lib/supabaseClient";
-import { GameState, GameStateRemote, Topic } from "@/types";
+import { GameState, GameStateRemote, Player, Topic } from "@/types";
 
 export const DEFAULT_ROUND_DURATION = 150;
 export const GUESS_POINTS = 5;
@@ -33,31 +33,47 @@ export const getRandomTopic = (
 export const calculateScore = (timeLeft: number, roundDuration: number) =>
   Math.round((timeLeft / roundDuration) * POINTS_MULTIPLIER);
 
-export const updateGame = async (gameId: string, newState: GameState) => {
-  const { id, ...rest } = newState;
-  const state: GameStateRemote = {
-    ...rest,
-    currentDrawer: newState.currentDrawer?.id ?? null,
-    nextDrawer: newState.nextDrawer?.id ?? null,
-  };
+export const convertRemoteToLocal = (
+  remote: GameStateRemote,
+  getPlayerById: (id: string | null) => Player | undefined
+): GameState => {
+  const {
+    currentDrawer: currentDrawerId,
+    nextDrawer: nextDrawerId,
+    ...rest
+  } = remote;
 
-  return await supabase.from("games").update(state).eq("room_id", gameId);
+  return {
+    ...rest,
+    currentDrawer: getPlayerById(currentDrawerId),
+    nextDrawer: getPlayerById(nextDrawerId),
+  } as GameState;
 };
+
+/************
+ * API calls
+ * **********/
 
 export const fetchTopics = async () => {
   const { data } = await supabase.from("topics").select("*");
   return data ?? [];
 };
 
-export const getOrCreateGameState = async (
-  gameId: string,
-  initialState: GameState
-) => {
+export const getGameState = async (gameId: string) => {
   const { data } = await supabase
     .from("games")
     .select("*")
     .eq("room_id", gameId)
     .single();
+
+  return data as GameStateRemote | null;
+};
+
+export const getOrCreateGameState = async (
+  gameId: string,
+  initialState: GameState
+) => {
+  const data = await getGameState(gameId);
 
   // create a new game state if none exists
   if (!data) {
@@ -78,4 +94,15 @@ export const getOrCreateGameState = async (
   }
 
   return data;
+};
+
+export const updateGame = async (gameId: string, newState: GameState) => {
+  const { id, ...rest } = newState;
+  const state: GameStateRemote = {
+    ...rest,
+    currentDrawer: newState.currentDrawer?.id ?? null,
+    nextDrawer: newState.nextDrawer?.id ?? null,
+  };
+
+  return await supabase.from("games").update(state).eq("room_id", gameId);
 };

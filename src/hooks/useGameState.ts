@@ -2,13 +2,15 @@ import {
   clearCanvasAtom,
   currentPlayerAtom,
   gameStateAtom,
-  isLoadingAtom,
+  loadingStatusAtom,
   playersAtom,
 } from "@/atoms";
 import {
   calculateScore,
+  convertRemoteToLocal,
   DEFAULT_ROUND_DURATION,
   fetchTopics,
+  getGameState,
   getInitialState,
   getOrCreateGameState,
   getRandomTopic,
@@ -35,7 +37,7 @@ const gameId = "spindox";
  * Handles real-time game state updates, player management, and game flow
  */
 export function useGameState() {
-  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
+  const [loadingStatus, setLoadingStatus] = useAtom(loadingStatusAtom);
   // State management atoms and local state
   const [gameState, setGameState] = useAtom(gameStateAtom);
 
@@ -69,6 +71,19 @@ export function useGameState() {
     },
     [setGameState]
   );
+
+  const syncGameState = useCallback(async () => {
+    setLoadingStatus("sync");
+    const currentGameState = await getGameState(gameId);
+    const playersData = await fetchPlayers();
+
+    if (currentGameState) {
+      const local = convertRemoteToLocal(currentGameState, getPlayerById);
+      setGameState(local);
+    }
+    setPlayers(playersData);
+    setLoadingStatus("idle");
+  }, [setLoadingStatus, setPlayers, getPlayerById, setGameState]);
 
   /**
    * Initiates a new game session
@@ -211,13 +226,13 @@ export function useGameState() {
       setGameState(gameState);
       setPlayers(playersData);
       setTopics(topicsData);
-      setIsLoading(false);
+      setLoadingStatus("idle");
     };
 
-    if (isLoading) {
+    if (loadingStatus === "initial") {
       initServices();
     }
-  }, [isLoading, setGameState, setPlayers, setIsLoading]);
+  }, [loadingStatus, setGameState, setPlayers, setLoadingStatus]);
 
   /**
    * Effect hook for updating current topic when it changes
@@ -232,7 +247,7 @@ export function useGameState() {
   // Return hook interface
   return {
     currentPlayer,
-    isLoading,
+    loadingStatus,
     gameState,
     players,
     topic,
@@ -243,5 +258,6 @@ export function useGameState() {
     setTimer,
     startGame,
     startDrawing,
+    syncGameState,
   };
 }

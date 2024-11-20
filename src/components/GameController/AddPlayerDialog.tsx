@@ -7,15 +7,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Loader } from "lucide-react";
 import { useState } from "react";
 
 type Props = {
+  isLoading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddPlayer: (name: string) => void;
 };
 
-export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: Props) {
+export function AddPlayerDialog({
+  isLoading,
+  open,
+  onOpenChange,
+  onAddPlayer,
+}: Props) {
   const [playerName, setPlayerName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,8 +48,9 @@ export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: Props) {
             autoFocus
           />
           <DialogFooter>
-            <Button type="submit" disabled={!playerName.trim()}>
+            <Button type="submit" disabled={isLoading || !playerName.trim()}>
               Add Player
+              {isLoading && <Loader className="mr-2 w-4 h-4" />}
             </Button>
           </DialogFooter>
         </form>

@@ -7,7 +7,7 @@ import { Loading } from "@/components/ui/loading";
 import { Section } from "@/components/ui/Section";
 import { useGameState } from "@/hooks/useGameState";
 import { useAtomValue } from "jotai";
-import { Clock, Play } from "lucide-react";
+import { Clock, Loader, Play, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { TimerSettings } from "../Timer/TimerSettings";
 import { GameOver } from "./GameOver";
@@ -18,7 +18,7 @@ import { WinnerDialog } from "./WinnerDialog";
 
 export function GameController() {
   const {
-    isLoading,
+    loadingStatus,
     gameState,
     players,
     topic,
@@ -28,14 +28,17 @@ export function GameController() {
     setTimer,
     newGame,
     handleWinnerSelection,
+    syncGameState,
   } = useGameState();
   const [isTimerSettingsOpen, setIsTimerSettingsOpen] = useState(false);
   const isDrawer = useAtomValue(isDrawerAtom);
 
+  const isLoading = loadingStatus === "initial";
+
   return (
     <Section
       as="aside"
-      className="flex flex-col gap-2 [grid-area:sidebar] p-2 min-w-[200px] h-full"
+      className="relative flex flex-col gap-2 [grid-area:sidebar] p-2 min-w-[200px] h-full"
     >
       {isLoading ? (
         <Loading />
@@ -119,6 +122,19 @@ export function GameController() {
             onSetTimer={setTimer}
             currentTime={gameState.currentRoundDuration}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={syncGameState}
+            className="mt-auto"
+          >
+            {loadingStatus === "sync" ? (
+              <Loader className="mr-2 w-4 h-4" />
+            ) : (
+              <RefreshCw className="mr-2 w-4 h-4" />
+            )}
+            Synchronize
+          </Button>
         </>
       )}
     </Section>
