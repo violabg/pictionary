@@ -23,10 +23,10 @@ import {
   selectNextDrawer,
   updatePlayerScore,
 } from "@/lib/playerService";
-import { supabase } from "@/lib/supabaseClient";
-import { GameState, GameStateRemote, GameStatus, Player, Topic } from "@/types";
+import { GameState, GameStatus, Topic } from "@/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 const gameId = "spindox";
 
@@ -46,6 +46,14 @@ export function useGameState() {
 
   const [topic, setTopic] = useState<Topic>();
   const [topics, setTopics] = useState<Topic[]>([]);
+
+  /**
+   * Handles Supabase real-time subscriptions for game state and player updates
+   */
+  useRealtimeSync(gameId, players, {
+    onGameUpdate: setGameState,
+    onPlayerUpdate: setPlayers,
+  });
 
   /**
    * Updates the game state in the Supabase database
@@ -207,78 +215,6 @@ export function useGameState() {
       initServices();
     }
   }, [isLoading, setGameState, setPlayers, setIsLoading]);
-
-  /**
-   * Handles Supabase real-time subscriptions for game state and player updates
-   */
-  useEffect(() => {
-    // Set up real-time subscription to game state changes
-    const gameSubscription = supabase
-      .channel("games")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "games",
-          filter: `room_id=eq.${gameId}`,
-        },
-        (payload) => {
-          const game = payload.new as GameStateRemote;
-          if (
-            payload.eventType === "INSERT" ||
-            payload.eventType === "UPDATE"
-          ) {
-            const {
-              currentDrawer: _currentDrawer,
-              nextDrawer: _nextDrawer,
-              ...rest
-            } = game;
-            const nextDrawer = getPlayerById(players, _nextDrawer ?? "");
-            const currentDrawer = getPlayerById(players, _currentDrawer ?? "");
-            setGameState({
-              ...rest,
-              currentDrawer,
-              nextDrawer,
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    // Real-time subscription
-    const playersSubscription = supabase
-      .channel("players_channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "players",
-        },
-        (payload) => {
-          const player = payload.new as Player;
-
-          if (payload.eventType === "INSERT") {
-            setPlayers((current) => [...current, player]);
-          } else if (payload.eventType === "DELETE") {
-            setPlayers((current) =>
-              current.filter((p) => p.id !== payload.old.id)
-            );
-          } else if (payload.eventType === "UPDATE") {
-            setPlayers((current) =>
-              current.map((p) => (p.id === player.id ? player : p))
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(gameSubscription);
-      supabase.removeChannel(playersSubscription);
-    };
-  }, [players, setGameState, setPlayers]);
 
   /**
    * Effect hook for updating current topic when it changes
