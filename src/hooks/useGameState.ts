@@ -80,10 +80,10 @@ export function useGameState() {
 
     // Reset player scores and states
     await resetPlayerScores();
-    // Select random topic and initialize new round
+    // Select random topic and player then initialize new round
     const randomTopic = getRandomTopic(topics, gameState.pastTopics);
-
     const drawer = selectNextDrawer(players, gameState.currentDrawer?.id);
+
     const newState = {
       ...gameState,
       currentDrawer: drawer,
