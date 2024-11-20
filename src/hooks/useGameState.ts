@@ -18,7 +18,6 @@ import {
 } from "@/lib/gameServices";
 import {
   fetchPlayers,
-  getPlayerById,
   resetPlayerScores,
   selectNextDrawer,
   updatePlayerScore,
@@ -26,7 +25,8 @@ import {
 import { GameState, GameStatus, Topic } from "@/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
-import { useRealtimeSync } from "./useRealtimeSync";
+import { useGameSync } from "./useGameSync";
+import { usePlayersSync } from "./usePlayersSync";
 
 const gameId = "spindox";
 
@@ -47,13 +47,16 @@ export function useGameState() {
   const [topic, setTopic] = useState<Topic>();
   const [topics, setTopics] = useState<Topic[]>([]);
 
+  const getPlayerById = useCallback(
+    (id: string | null) => players.find((p) => p.id === id),
+    [players]
+  );
+
   /**
-   * Handles Supabase real-time subscriptions for game state and player updates
+   * Handle Supabase real-time subscriptions for game state and player updates
    */
-  useRealtimeSync(gameId, players, {
-    onGameUpdate: setGameState,
-    onPlayerUpdate: setPlayers,
-  });
+  useGameSync(gameId, setGameState, getPlayerById);
+  usePlayersSync(players, setPlayers);
 
   /**
    * Updates the game state in the Supabase database
@@ -117,7 +120,7 @@ export function useGameState() {
     // Calculate and award points to drawer
     const points = calculateScore(timeLeft, gameState.currentRoundDuration);
     if (gameState?.currentDrawer) {
-      const newPlayer = getPlayerById(players, gameState.currentDrawer.id);
+      const newPlayer = getPlayerById(gameState.currentDrawer.id);
       if (newPlayer) {
         await updatePlayerScore(newPlayer.id, newPlayer.score + points, true);
       }
@@ -139,7 +142,7 @@ export function useGameState() {
    */
   const handleWinnerSelection = async (winnerId: string) => {
     // Award points to the winner
-    const winner = getPlayerById(players, winnerId);
+    const winner = getPlayerById(winnerId);
     if (winner) {
       await updatePlayerScore(
         winner.id,
