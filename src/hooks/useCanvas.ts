@@ -1,5 +1,6 @@
 import { clearCanvasAtom } from "@/atoms";
 import { useSupabase } from "@/contexts/SupabaseContext";
+import { CanvasSyncManager } from "@/services/CanvasSyncManager";
 import { CanvasOperation, DrawingData, DrawingSettings } from "@/types";
 import {
   base64ToImageData,
@@ -9,7 +10,7 @@ import {
   updateCanvasSize,
 } from "@/utils/canvas";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**
  * Custom hook for managing canvas drawing functionality
@@ -17,8 +18,13 @@ import { useCallback, useEffect, useState } from "react";
  * @param canvasRef - Reference to the canvas HTML element
  */
 export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
-  // State management for drawing context and settings
   const { channel } = useSupabase();
+  const syncManager = useMemo(
+    () => (channel ? new CanvasSyncManager(channel) : null),
+    [channel]
+  );
+
+  // State management for drawing context and settings
   const [isDrawing, setIsDrawing] = useState(false);
   const canvas = canvasRef.current;
 
@@ -98,20 +104,8 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
           }
         },
       });
-
-      if (!isRemoteEvent) {
-        channel?.send({
-          type: "broadcast",
-          event: "draw-line",
-          payload: {
-            ...drawingData,
-            sourceWidth: canvas.width,
-            sourceHeight: canvas.height,
-          },
-        });
-      }
     },
-    [canvas, channel, executeCanvasOperation]
+    [canvas, executeCanvasOperation]
   );
 
   /**
@@ -126,7 +120,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      handleDrawOperation({
+      const drawingData = {
         x,
         y,
         isDrawing: !isStarting,
@@ -135,9 +129,12 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
         color: drawingSettings.color,
         sourceWidth: canvas.width,
         sourceHeight: canvas.height,
-      });
+      };
+
+      handleDrawOperation(drawingData);
+      syncManager?.broadcastDraw(drawingData);
     },
-    [canvas, isDrawing, drawingSettings, handleDrawOperation]
+    [canvas, isDrawing, drawingSettings, handleDrawOperation, syncManager]
   );
 
   /**
@@ -157,8 +154,6 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   /**
    * Drawing control functions
    * startDrawing: Initiates drawing process
-   * draw: Continues drawing based on mouse movement
-   * stopDrawing: Ends drawing and saves state
    */
   const startDrawing = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -167,14 +162,20 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     },
     [handlePointerEvent]
   );
-
+  /**
+   * Drawing control functions
+   * draw: Continues drawing based on mouse movement
+   */
   const draw = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       handlePointerEvent(e);
     },
     [handlePointerEvent]
   );
-
+  /**
+   * Drawing control functions
+   * stopDrawing: Ends drawing and saves state
+   */
   const stopDrawing = useCallback(() => {
     if (isDrawing) {
       saveCanvasState();
@@ -183,11 +184,7 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
   }, [isDrawing, saveCanvasState]);
 
   /**
-   * Canvas state management functions
    * updateCanvasFromHistory: Restores canvas to a previous state
-   * clearCanvas: Resets canvas to blank state
-   * clear: Broadcasts clear action to all users
-   * undo: Reverts to previous state and broadcasts change
    */
   const updateCanvasFromHistory = useCallback(
     (history: ImageData[]) => {
@@ -206,6 +203,23 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     [canvasRef, executeCanvasOperation]
   );
 
+  /**
+   * undo: Reverts to previous state and broadcasts change
+   */
+  const undo = useCallback(() => {
+    if (history.length === 0) return;
+
+    const newHistory = history.slice(0, -1);
+    setHistory(newHistory);
+    updateCanvasFromHistory(newHistory);
+
+    const base64History = newHistory.map(imageDataToBase64);
+    syncManager?.broadcastUndo(base64History);
+  }, [history, updateCanvasFromHistory, syncManager]);
+
+  /**
+   * clearCanvas: Resets canvas to blank state
+   */
   const clearCanvas = useCallback(() => {
     executeCanvasOperation({
       execute: (ctx) => {
@@ -216,28 +230,13 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     });
   }, [canvasRef, executeCanvasOperation]);
 
+  /**
+   * clear: Broadcasts clear action to all users
+   */
   const clear = useCallback(() => {
     clearCanvas();
-    channel?.send({
-      type: "broadcast",
-      event: "clear-canvas",
-    });
-  }, [clearCanvas, channel]);
-
-  const undo = useCallback(() => {
-    if (history.length === 0) return;
-
-    const newHistory = history.slice(0, -1);
-    setHistory(newHistory);
-    updateCanvasFromHistory(newHistory);
-
-    const base64History = newHistory.map(imageDataToBase64);
-    channel?.send({
-      type: "broadcast",
-      event: "undo-drawing",
-      payload: { history: base64History },
-    });
-  }, [history, updateCanvasFromHistory, channel]);
+    syncManager?.broadcastClear();
+  }, [clearCanvas, syncManager]);
 
   /**
    * Canvas size management
@@ -258,82 +257,81 @@ export function useCanvas(canvasRef: React.RefObject<HTMLCanvasElement>) {
     };
   }, [updateCanvasSizeCallback]);
 
-  /**
-   * Real-time collaboration effect
-   * Sets up listeners for remote drawing events
-   */
-  useEffect(() => {
-    if (!channel) return;
-
-    const handleDrawLine = (drawingData: DrawingData) => {
-      handleDrawOperation(drawingData, true);
-    };
-
-    const handleUndoDrawing = async (data: { history: string[] }) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const newHistory: ImageData[] = [];
-
-      // Convert and apply all history states
-      for (const base64 of data.history) {
-        try {
-          const imageData = await base64ToImageData(base64, canvas);
-          newHistory.push(imageData);
-        } catch (error) {
-          console.error("Failed to convert history state:", error);
-        }
-      }
-
-      setHistory(newHistory);
-      updateCanvasFromHistory(newHistory);
-    };
-
-    channel.on("broadcast", { event: "draw-line" }, ({ payload }) => {
-      handleDrawLine(payload);
-    });
-    channel.on("broadcast", { event: "undo-drawing" }, ({ payload }) => {
-      handleUndoDrawing(payload);
-    });
-    channel.on("broadcast", { event: "clear-canvas" }, () => {
-      clearCanvas();
-    });
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [
-    canvasRef,
-    clearCanvas,
-    handleDrawOperation,
-    setHistory,
-    channel,
-    updateCanvasFromHistory,
-  ]);
-
   // Clear canvas when clearCount changes
   useEffect(() => {
     clear();
   }, [clear, clearCount]);
 
-  // Return hook interface
-  return {
-    currentSize: drawingSettings.size,
-    isDrawing,
-    isErasing: drawingSettings.isErasing,
-    history,
-    clear,
-    draw,
-    saveCanvasState,
-    setCurrentSize: (size: number) =>
-      setDrawingSettings((prev) => ({ ...prev, size })),
-    setIsDrawing,
-    setIsErasing: (isErasing: boolean) =>
-      setDrawingSettings((prev) => ({ ...prev, isErasing })),
-    startDrawing,
-    stopDrawing,
-    undo,
-    setColor: (color: string) =>
-      setDrawingSettings((prev) => ({ ...prev, color })),
-  };
+  // Handle remote events
+  useEffect(() => {
+    if (!syncManager) return;
+
+    const unsubscribe = syncManager.subscribe({
+      onDraw: (drawingData) => handleDrawOperation(drawingData, true),
+      onUndo: async (base64History) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const newHistory: ImageData[] = [];
+        for (const base64 of base64History) {
+          try {
+            const imageData = await base64ToImageData(base64, canvas);
+            newHistory.push(imageData);
+          } catch (error) {
+            console.error("Failed to convert history state:", error);
+          }
+        }
+
+        setHistory(newHistory);
+        updateCanvasFromHistory(newHistory);
+      },
+      onClear: clearCanvas,
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [
+    syncManager,
+    handleDrawOperation,
+    clearCanvas,
+    updateCanvasFromHistory,
+    canvasRef,
+  ]);
+
+  // Return memoized interface
+  return useMemo(
+    () => ({
+      currentSize: drawingSettings.size,
+      isDrawing,
+      isErasing: drawingSettings.isErasing,
+      history,
+      clear,
+      draw,
+      saveCanvasState,
+      setCurrentSize: (size: number) =>
+        setDrawingSettings((prev) => ({ ...prev, size })),
+      setIsDrawing,
+      setIsErasing: (isErasing: boolean) =>
+        setDrawingSettings((prev) => ({ ...prev, isErasing })),
+      startDrawing,
+      stopDrawing,
+      undo,
+      setColor: (color: string) =>
+        setDrawingSettings((prev) => ({ ...prev, color })),
+    }),
+    [
+      drawingSettings.size,
+      drawingSettings.isErasing,
+      isDrawing,
+      history,
+      clear,
+      draw,
+      saveCanvasState,
+      setIsDrawing,
+      startDrawing,
+      stopDrawing,
+      undo,
+    ]
+  );
 }
