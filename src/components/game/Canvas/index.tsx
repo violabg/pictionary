@@ -52,28 +52,25 @@ const Canvas: React.FC<Props> = ({
 
   return (
     <>
-      <div className="relative pb-[56.25%] w-full">
-        {/* Aspect ratio container */}
-        <div className="absolute inset-0">
-          <canvas
-            ref={canvasRef}
-            className={`w-full h-full bg-white rounded-lg ${
-              isErasing ? "cursor-none" : "cursor-crosshair"
-            } ${!drawingEnabled ? "pointer-events-none" : "touch-none"}`}
-            onPointerDown={startDrawing}
-            onPointerMove={draw}
-            onPointerUp={stopDrawing}
-            onPointerLeave={stopDrawing}
-            style={{ touchAction: "none" }} // Prevent scrolling while drawing
-          />
-          {!drawingEnabled && (
-            <Section className="absolute inset-0 flex justify-center items-center opacity-95">
-              <Card className="shadow-lg p-6 text-center">
-                <h2 className="font-bold text-xl">Waiting to start...</h2>
-              </Card>
-            </Section>
-          )}
-        </div>
+      <div className="relative w-full h-full">
+        <canvas
+          ref={canvasRef}
+          className={`absolute inset-0 bg-white rounded-lg ${
+            isErasing ? "cursor-none" : "cursor-crosshair"
+          } ${!drawingEnabled ? "pointer-events-none" : "touch-none"}`}
+          onPointerDown={startDrawing}
+          onPointerMove={draw}
+          onPointerUp={stopDrawing}
+          onPointerLeave={stopDrawing}
+          style={{ touchAction: "none" }} // Prevent scrolling while drawing
+        />
+        {!drawingEnabled && (
+          <Section className="absolute inset-0 flex justify-center items-center opacity-95">
+            <Card className="shadow-lg p-6 text-center">
+              <h2 className="font-bold text-xl">Waiting to start...</h2>
+            </Card>
+          </Section>
+        )}
       </div>
 
       {isErasing && (
