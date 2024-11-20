@@ -1,8 +1,8 @@
 import { gameStateAtom } from "@/atoms";
 import { Card } from "@/components/ui/card";
+import { Section } from "@/components/ui/Section";
 import { useAtomValue } from "jotai";
 import React, { useRef, useState } from "react";
-import { Section } from "../ui/Section";
 
 type Props = {
   isErasing: boolean;

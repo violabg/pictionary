@@ -1,14 +1,14 @@
 import { clearCanvasAtom } from "@/atoms";
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { CanvasSyncManager } from "@/services/CanvasSyncManager";
-import { CanvasOperation, DrawingData, DrawingSettings } from "@/types";
 import {
   base64ToImageData,
   get2DContext,
   imageDataToBase64,
   normalizeCoordinates,
   updateCanvasSize,
-} from "@/utils/canvas";
+} from "@/lib/canvas";
+import { CanvasSyncManager } from "@/lib/CanvasSyncManager";
+import { CanvasOperation, DrawingData, DrawingSettings } from "@/types";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 

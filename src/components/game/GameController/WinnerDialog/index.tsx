@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Player, Topic } from "@/types";
 import { useState } from "react";
-import { TopicCard } from "./TopicCard";
+import { TopicCard } from "../TopicCard";
 
 interface WinnerDialogProps {
   open: boolean;

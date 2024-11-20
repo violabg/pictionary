@@ -2,7 +2,7 @@
 
 import { showDrawingToolsAtom } from "@/atoms";
 import { jotaiStore } from "@/atoms/store";
-import { GameController } from "@/components/GameController";
+import { GameController } from "@/components/game/GameController";
 import { Provider, useAtomValue } from "jotai";
 import Whiteboard from "../Whiteboard";
 

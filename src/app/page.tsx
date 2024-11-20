@@ -1,4 +1,4 @@
-import Pictionary from "@/components/Pictionary";
+import Pictionary from "@/components/game/Pictionary";
 
 export default function Home() {
   return (

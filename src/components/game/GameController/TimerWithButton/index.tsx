@@ -1,4 +1,4 @@
-import { Timer } from "@/components/Timer";
+import { Timer } from "@/components/game/Timer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GameState } from "@/types";
