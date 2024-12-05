@@ -42,7 +42,7 @@ export function PlayersList() {
             key={player.id}
             className={`flex items-center gap-2 py-1 px-2 rounded-md ${
               gameState.currentDrawer?.id === player.id
-                ? " text-white border border-secondary"
+                ? " border border-secondary bg-gray-800"
                 : ""
             }`}
           >

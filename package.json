@@ -1,6 +1,6 @@
 {
   "name": "pictionary",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,7 +17,7 @@
     "@radix-ui/react-radio-group": "^1.2.1",
     "@radix-ui/react-slider": "^1.2.1",
     "@radix-ui/react-slot": "^1.1.0",
-    "@supabase/supabase-js": "^2.46.1",
+    "@supabase/supabase-js": "2.46.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "jotai": "^2.10.1",
